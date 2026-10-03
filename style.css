@@ -57,3 +57,4 @@ input{background:var(--bg);color:var(--tx);border:1px solid var(--line);border-r
 .rv input[data-r=n]{flex:1 1 100%}
 .rv input[data-r=m]{width:110px}
 input[type=checkbox]{padding:0;width:auto}
+.del{border-color:var(--f);color:var(--f);padding:6px 10px}

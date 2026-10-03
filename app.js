@@ -205,11 +205,24 @@ function rosFill(){
 <input data-r="m" data-i="${i}" value="${q(f.m)}" placeholder="Matrícula" size="9">
 <select data-r="v" data-i="${i}"><option${f.v=="Efetivo"?" selected":""}>Efetivo</option><option${f.v=="Nomeado"?" selected":""}>Nomeado</option></select>
 <select data-r="t" data-i="${i}"><option value="D"${f.t=="D"?" selected":""}>☀️ Diurno</option><option value="N"${f.t=="N"?" selected":""}>🌙 Noturno</option></select>
-<label class="mut"><input type="checkbox" data-r="a" data-i="${i}"${f.off?"":" checked"}> Ativo</label></div>`).join("");
+<label class="mut"><input type="checkbox" data-r="a" data-i="${i}"${f.off?"":" checked"}> Ativo</label><button data-del="${i}" class="del">🗑️ Remover</button></div>`).join("");
 }
 function rosChanged(){ls.set("escala-emp",BASE);fillSel();eufill();tudo()}
 $("ros").onchange=e=>{const t=e.target,r=t.dataset.r,f=BASE[+t.dataset.i];if(!r||!f)return;
  if(r=="n"){if(!t.value.trim()){t.value=f.n;return}f.n=t.value.trim()}else if(r=="a")f.off=!t.checked;else f[r]=t.value;
  rosChanged()};
+function remover(i){
+ const f=BASE[i];if(!f)return;
+ if(BASE.length<2){alert("Precisa ficar pelo menos um vigia.");return}
+ let meses=0,tn=0;Object.keys(ALL).forEach(k=>{const n=Object.keys((ALL[k]||[])[i]||{}).length;if(n){meses++;tn+=n}});
+ const msg=tn?`Remover ${f.n}?\n\nIsso apaga ${tn} dia(s) de escala dele em ${meses} mês(es), inclusive nos PDFs antigos. Não dá para desfazer. Se tiver dúvida, faça um backup antes.`:`Remover ${f.n}?`;
+ if(!confirm(msg))return;
+ BASE.splice(i,1);
+ Object.keys(ALL).forEach(k=>{if(Array.isArray(ALL[k]))ALL[k].splice(i,1)});
+ XA.forEach(x=>{if(x.de!==""&&x.de!=null){const d=+x.de;x.de=d==i?"":String(d>i?d-1:d)}});
+ EU=EU==i?0:(EU>i?EU-1:EU);ls.set("escala-eu",EU);fil.value="";
+ ls.set("escala-x",XA);save();rosFill();rosChanged();
+}
+$("ros").onclick=e=>{const b=e.target.closest("button[data-del]");if(b)remover(+b.dataset.del)};
 $("addv").onclick=()=>{BASE.push({n:"Novo vigia",m:"",v:"Efetivo",t:"D"});Object.keys(ALL).forEach(k=>pad(ALL[k]));save();rosFill();rosChanged()};
 rosFill();
