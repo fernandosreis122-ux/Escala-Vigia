@@ -14,6 +14,8 @@ let BASE=ls.get("escala-emp");if(!Array.isArray(BASE)||!BASE.length)BASE=INIT.ma
 const pad=a=>{while(a.length<BASE.length)a.push({});return a};
 const norm=s=>String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
 let FER=ls.get("escala-fer")||{"2026-10":[{n:"Antônio José Lobo da Silva",p:"10/09 a 09/10/2026",r:"2024/2025"}]};
+let HID=ls.get("escala-hid")||{};
+function ensureIds(){let ch=false,n=1;BASE.forEach(b=>{if(!b.id){let id;do{id="e"+n++}while(BASE.some(x=>x.id==id));b.id=id;ch=true}});if(ch)ls.set("escala-emp",BASE)}ensureIds();
 function base(){return pad(INIT.map(f=>{const o={};f.dias.forEach(d=>o[d]=(f.t=="D"||(f.sd&&f.sd.includes(d)))?"D":"N");if(f.ferias)for(let d=f.ferias[0];d<=f.ferias[1];d++)o[d]="F";return o}))}
 const empty=()=>BASE.map(()=>({})),mk=(y,m)=>y+"-"+String(m+1).padStart(2,"0");
 let ALL=ls.get("escala-all");
@@ -26,7 +28,8 @@ let EU=ls.get("escala-eu");if(typeof EU!="number"||EU<0||EU>=BASE.length)EU=0;
 let X=[];const refX=()=>{X=XA.filter(x=>x.m==mk(ANO,MES))};refX();
 let tipo="",view="mes",edit=false,sel=null,wk=0;
 const fillSel=()=>{const cur=fil.value;fil.innerHTML='<option value="">Todos os funcionários</option>'+BASE.map((f,i)=>`<option value="${i}">${f.n}</option>`).join("");fil.value=cur};fillSel();
-const vis=i=>!BASE[i].off||Object.keys(S[i]||{}).length>0;
+const hidden=i=>(HID[mk(ANO,MES)]||[]).includes(BASE[i].id);
+const vis=i=>!hidden(i)&&(!BASE[i].off||Object.keys(S[i]||{}).length>0);
 const isHoje=d=>hoje.getFullYear()==ANO&&hoje.getMonth()==MES&&hoje.getDate()==d;
 const LB={D:"SD",N:"SN",F:"Férias"};
 function turnos(d){const r=[];BASE.forEach((f,i)=>{const k=S[i][d];if(k)r.push({f,i,k,l:LB[k]})});
@@ -86,7 +89,7 @@ function vgChips(){
 }
 $("vgc").onclick=e=>{const b=e.target.closest("button");if(!b)return;const v=b.dataset.i;fil.value=(v!==""&&fil.value===v)?"":v;vgChips();render()};
 const eufill=()=>{$("eu").innerHTML=BASE.map((f,i)=>`<option value="${i}">${f.n}</option>`).join("");$("eu").value=EU};eufill();$("eu").onchange=()=>{EU=+$("eu").value;ls.set("escala-eu",EU);cont()};
-function tudo(){vgChips();refX();$("tt").textContent=MN[MES]+" de "+ANO;render();detalhe(sel);cont();hojeBox()}
+function tudo(){vgChips();refX();$("tt").textContent=MN[MES]+" de "+ANO;render();detalhe(sel);cont();hojeBox();rosFill()}
 det.onclick=e=>{const ax=e.target.closest("button[data-x]"),rx=e.target.closest("button[data-rx]");
  if(ax){XA.push({m:mk(ANO,MES),d:sel,k:ax.dataset.x,de:$("cov").value});ls.set("escala-x",XA);tudo();return}
  if(rx){XA.splice(+rx.dataset.rx,1);ls.set("escala-x",XA);tudo();return}
@@ -166,7 +169,7 @@ async function compartilhar(){
 $("pdf").onclick=baixar;$("shr").onclick=compartilhar;
 try{if(!window.claude&&navigator.canShare&&navigator.canShare({files:[new File(["x"],"a.pdf",{type:"application/pdf"})]}))$("shr").style.display=""}catch(e){}
 // backup
-const bkTxt=()=>JSON.stringify({v:3,emp:BASE,ALL,X:XA,fer:FER});
+const bkTxt=()=>JSON.stringify({v:3,emp:BASE,ALL,X:XA,fer:FER,hid:HID});
 $("exp").onclick=()=>{$("bk").value=bkTxt()};
 $("cop").onclick=async()=>{const t=bkTxt();$("bk").value=t;
  try{await navigator.clipboard.writeText(t);alert("Backup copiado.")}catch(e){$("bk").select();try{document.execCommand("copy");alert("Backup copiado.")}catch(e2){alert("Selecione o texto e copie manualmente.")}}};
@@ -178,17 +181,18 @@ $("imp").onclick=()=>{try{const x=JSON.parse($("bk").value);let A,XX=[];
  if(x.merge){
   let map=null;
   if(Array.isArray(x.emp))map=x.emp.map(e=>{let i=BASE.findIndex(b=>norm(b.n)==norm(e.n));if(i<0){BASE.push({n:e.n,m:e.m||"",v:e.v||"Efetivo",t:e.t=="N"?"N":"D"});i=BASE.length-1}return i});
-  for(const k in A){const dst=BASE.map(()=>({}));A[k].forEach((o,j)=>{const i=map?map[j]:j;if(i!=null&&i<dst.length)dst[i]=o});ALL[k]=dst}
-  Object.keys(ALL).forEach(k=>pad(ALL[k]));
+  for(const k in A){ensureIds();const dst=pad((ALL[k]||[]).slice());A[k].forEach((o,j)=>{const i=map?map[j]:j;if(i!=null&&i<dst.length)dst[i]=o});ALL[k]=dst}
+  ensureIds();Object.keys(ALL).forEach(k=>pad(ALL[k]));
+  if(x.hid)for(const k in x.hid){const ids=x.hid[k].map(n=>{const b=BASE.find(b=>norm(b.n)==norm(n));return b&&b.id}).filter(Boolean);HID[k]=[...new Set([...(HID[k]||[]),...ids])]}
   if(x.fer)FER={...FER,...x.fer};
   if(Array.isArray(x.X))x.X.forEach(v=>{if(!XA.some(w=>w.m==v.m&&w.d==v.d&&w.k==v.k))XA.push({de:"",...v})});
   const k=Object.keys(A).sort()[0];if(k){ANO=+k.slice(0,4);MES=+k.slice(5)-1}
  }else{
-  if(Array.isArray(x.emp)&&x.emp.length)BASE=x.emp;
+  if(Array.isArray(x.emp)&&x.emp.length){BASE=x.emp;HID=x.hid||{};ensureIds()}
   for(const k in A)if(!Array.isArray(A[k])||A[k].length>BASE.length)throw 0;
   ALL=A;XA=XX.map(v=>({m:"2026-10",...v}));if(x.fer)FER=x.fer;
  }
- ls.set("escala-emp",BASE);ls.set("escala-fer",FER);
+ ls.set("escala-emp",BASE);ls.set("escala-fer",FER);ls.set("escala-hid",HID);
  S=getS(ANO,MES);sel=(hoje.getFullYear()==ANO&&hoje.getMonth()==MES)?hoje.getDate():1;wk=sel-new Date(ANO,MES,sel).getDay();
  save();ls.set("escala-x",XA);fillSel();eufill();rosFill();tudo();if(x.merge)alert("Escala de "+MN[MES]+" de "+ANO+" importada.")}catch(e){alert("Texto de backup inválido.")}};
 $("rst").onclick=()=>{if(confirm(ANO==2026&&MES==9?"Voltar este mês à escala original da foto?":"Limpar a escala deste mês?")){ALL[mk(ANO,MES)]=(ANO==2026&&MES==9)?base():empty();S=ALL[mk(ANO,MES)];save();tudo()}};
@@ -205,7 +209,7 @@ function rosFill(){
 <input data-r="m" data-i="${i}" value="${q(f.m)}" placeholder="Matrícula" size="9">
 <select data-r="v" data-i="${i}"><option${f.v=="Efetivo"?" selected":""}>Efetivo</option><option${f.v=="Nomeado"?" selected":""}>Nomeado</option></select>
 <select data-r="t" data-i="${i}"><option value="D"${f.t=="D"?" selected":""}>☀️ Diurno</option><option value="N"${f.t=="N"?" selected":""}>🌙 Noturno</option></select>
-<label class="mut"><input type="checkbox" data-r="a" data-i="${i}"${f.off?"":" checked"}> Ativo</label><button data-del="${i}" class="del">🗑️ Remover</button></div>`).join("");
+<label class="mut"><input type="checkbox" data-r="a" data-i="${i}"${f.off?"":" checked"}> Ativo</label><button data-hide="${i}">${hidden(i)?"👁️ Mostrar em ":"🙈 Tirar de "}${MN[MES]}</button><button data-del="${i}" class="del">🗑️ Remover de todos</button></div>`).join("");
 }
 function rosChanged(){ls.set("escala-emp",BASE);fillSel();eufill();tudo()}
 $("ros").onchange=e=>{const t=e.target,r=t.dataset.r,f=BASE[+t.dataset.i];if(!r||!f)return;
@@ -215,7 +219,7 @@ function remover(i){
  const f=BASE[i];if(!f)return;
  if(BASE.length<2){alert("Precisa ficar pelo menos um vigia.");return}
  let meses=0,tn=0;Object.keys(ALL).forEach(k=>{const n=Object.keys((ALL[k]||[])[i]||{}).length;if(n){meses++;tn+=n}});
- const msg=tn?`Remover ${f.n}?\n\nIsso apaga ${tn} dia(s) de escala dele em ${meses} mês(es), inclusive nos PDFs antigos. Não dá para desfazer. Se tiver dúvida, faça um backup antes.`:`Remover ${f.n}?`;
+ const msg=tn?`Remover ${f.n}?\n\nIsso apaga ${tn} dia(s) de escala dele em ${meses} mês(es), inclusive nos PDFs antigos. Isso vale para TODOS os meses. Para tirar só de um mês, use o botão "Tirar de" (ele pode ser desfeito). Não dá para desfazer a remoção; faça um backup antes.`:`Remover ${f.n}?`;
  if(!confirm(msg))return;
  BASE.splice(i,1);
  Object.keys(ALL).forEach(k=>{if(Array.isArray(ALL[k]))ALL[k].splice(i,1)});
@@ -223,6 +227,8 @@ function remover(i){
  EU=EU==i?0:(EU>i?EU-1:EU);ls.set("escala-eu",EU);fil.value="";
  ls.set("escala-x",XA);save();rosFill();rosChanged();
 }
-$("ros").onclick=e=>{const b=e.target.closest("button[data-del]");if(b)remover(+b.dataset.del)};
-$("addv").onclick=()=>{BASE.push({n:"Novo vigia",m:"",v:"Efetivo",t:"D"});Object.keys(ALL).forEach(k=>pad(ALL[k]));save();rosFill();rosChanged()};
+$("ros").onclick=e=>{const d=e.target.closest("button[data-del]"),hd=e.target.closest("button[data-hide]");
+ if(d)remover(+d.dataset.del);
+ if(hd){const f=BASE[+hd.dataset.hide],k=mk(ANO,MES),l=HID[k]||[];HID[k]=l.includes(f.id)?l.filter(z=>z!=f.id):[...l,f.id];ls.set("escala-hid",HID);tudo()}};
+$("addv").onclick=()=>{BASE.push({n:"Novo vigia",m:"",v:"Efetivo",t:"D"});ensureIds();Object.keys(ALL).forEach(k=>pad(ALL[k]));save();rosFill();rosChanged()};
 rosFill();
