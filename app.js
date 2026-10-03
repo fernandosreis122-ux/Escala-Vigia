@@ -2,7 +2,7 @@ let ANO=2026,MES=9;const MN=["Janeiro","Fevereiro","Março","Abril","Maio","Junh
 const BASE=[
  {n:"Fernando Sales Reis",m:"85.329-2",v:"Nomeado",t:"D",dias:[2,5,7,9,11,13,15,19,21,25,27,29]},
  {n:"Antônio José Lobo da Silva",m:"38.310-4",v:"Efetivo",t:"D",dias:[10,12,14,18,20,22,26,28,30],ferias:[1,9]},
- {n:"Lucas Winnycius Silva Fernandes",m:"00.000-0",v:"Nomeado",t:"D",dias:[3,4,17,24,31]},
+ {n:"Lucas Winnycius Silva Fernandes",m:"85.329-2",v:"Nomeado",t:"D",dias:[3,4,17,24,31]},
  {n:"Renilson Alves Pereira",m:"35.778-2",v:"Efetivo",t:"N",dias:[1,4,6,7,10,13,16,19,22,25,28,31],sd:[6]},
  {n:"Valdiney Silva de Oliveira",m:"35.921-1",v:"Efetivo",t:"N",dias:[1,2,5,8,11,14,16,17,20,23,26,29],sd:[1,16]},
  {n:"Wilame dos Santos Pacheco",m:"35.974-2",v:"Efetivo",t:"N",dias:[3,6,8,9,12,15,18,21,23,24,27,30],sd:[8,23]}
@@ -171,7 +171,10 @@ $("bf").onchange=e=>{const f=e.target.files[0];if(f)f.text().then(t=>{$("bk").va
 $("imp").onclick=()=>{try{const x=JSON.parse($("bk").value);let A,XX;
  if(Array.isArray(x)){A={"2026-10":x};XX=[]}else if(x.ALL){A=x.ALL;XX=x.X||[]}else{A={"2026-10":x.S};XX=x.X||[]}
  for(const k in A)if(!Array.isArray(A[k])||A[k].length!=BASE.length)throw 0;
- ALL=A;XA=XX.map(v=>({m:"2026-10",...v}));S=getS(ANO,MES);save();ls.set("escala-x",XA);tudo()}catch(e){alert("Texto de backup inválido.")}};
+ if(x.merge){ALL={...ALL,...A};const k=Object.keys(A).sort()[0];if(k){ANO=+k.slice(0,4);MES=+k.slice(5)-1}}
+ else{ALL=A;XA=XX.map(v=>({m:"2026-10",...v}))}
+ S=getS(ANO,MES);sel=(hoje.getFullYear()==ANO&&hoje.getMonth()==MES)?hoje.getDate():1;wk=sel-new Date(ANO,MES,sel).getDay();
+ save();ls.set("escala-x",XA);tudo();if(x.merge)alert("Escala de "+MN[MES]+" de "+ANO+" importada.")}catch(e){alert("Texto de backup inválido.")}};
 $("rst").onclick=()=>{if(confirm(ANO==2026&&MES==9?"Voltar este mês à escala original da foto?":"Limpar a escala deste mês?")){ALL[mk(ANO,MES)]=(ANO==2026&&MES==9)?base():empty();S=ALL[mk(ANO,MES)];save();tudo()}};
 const goM=n=>{const d=new Date(ANO,MES+n,1);ANO=d.getFullYear();MES=d.getMonth();S=getS(ANO,MES);sel=(hoje.getFullYear()==ANO&&hoje.getMonth()==MES)?hoje.getDate():1;wk=sel-new Date(ANO,MES,sel).getDay();tudo()};
 $("mp").onclick=()=>goM(-1);$("mx").onclick=()=>goM(1);
