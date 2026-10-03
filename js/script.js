@@ -71,16 +71,16 @@ function detalhe(d){
  det.innerHTML=h+(t.length?t.map(x=>`<div><i class="dot" style="background:var(--${x.k.toLowerCase()})"></i><b>${x.f.n}</b> — ${x.k=="D"?"Serviço diurno (07:00–19:00)":x.k=="N"?"Serviço noturno (19:00–07:00)":"Férias"}<br><span>Mat. ${x.f.m} · ${x.f.v}</span></div>`).join(""):"<span>Sem escalas neste dia.</span>")+xdet(d,0);
 }
 function cont(){
- $("cnt").innerHTML="<table><tr><th>Funcionário</th><th>SD</th><th>SN</th><th>Férias</th><th>Total</th></tr>"+BASE.map((f,i)=>{
-  const v=Object.values(S[i]),c=k=>v.filter(x=>x==k).length;
-  return `<tr><td>${f.n.split(" ").slice(0,2).join(" ")}</td><td>${c("D")}</td><td>${c("N")}</td><td>${c("F")}</td><td><b>${c("D")+c("N")}</b></td></tr>`}).join("")+"</table>"+(X.length?`<p style="color:var(--x)">🟢 Plantões extras: <b>${X.length}</b> (SD ${X.filter(x=>x.k=="D").length} · SN ${X.filter(x=>x.k=="N").length})</p>`:"");
+ $("cnt").innerHTML="<table><tr><th>Funcionário</th><th>SD</th><th>SN</th><th>Extra</th><th>Férias</th><th>Total</th></tr>"+BASE.map((f,i)=>{
+  const v=Object.values(S[i]),c=k=>v.filter(x=>x==k).length,ex=i==EU?X.length:0;
+  return `<tr><td>${f.n.split(" ").slice(0,2).join(" ")}</td><td>${c("D")}</td><td>${c("N")}</td><td style="color:var(--x)">${ex}</td><td>${c("F")}</td><td><b>${c("D")+c("N")+ex}</b></td></tr>`}).join("")+"</table>"+(X.length?`<p style="color:var(--x)">🟢 Plantões extras: <b>${X.length}</b> (SD ${X.filter(x=>x.k=="D").length} · SN ${X.filter(x=>x.k=="N").length}) somados ao total de ${BASE[EU].n.split(" ")[0]}</p>`:"");
 }
 function vgChips(){
  const nm=f=>{const p=f.n.split(" ");return p[0]+" "+p[p.length-1]};
  $("vgc").innerHTML=`<button data-i="" class="${fil.value===""?"on":""}">Todos</button>`+BASE.map((f,i)=>`<button data-i="${i}" class="${f.t=="D"?"d":"n"} ${fil.value===String(i)?"on":""}">${f.t=="D"?"☀️":"🌙"} ${nm(f)}</button>`).join("");
 }
 $("vgc").onclick=e=>{const b=e.target.closest("button");if(!b)return;const v=b.dataset.i;fil.value=(v!==""&&fil.value===v)?"":v;vgChips();render()};
-$("eu").innerHTML=BASE.map((f,i)=>`<option value="${i}">${f.n}</option>`).join("");$("eu").value=EU;$("eu").onchange=()=>{EU=+$("eu").value;ls.set("escala-eu",EU)};
+$("eu").innerHTML=BASE.map((f,i)=>`<option value="${i}">${f.n}</option>`).join("");$("eu").value=EU;$("eu").onchange=()=>{EU=+$("eu").value;ls.set("escala-eu",EU);cont()};
 function tudo(){vgChips();refX();$("tt").textContent=MN[MES]+" de "+ANO;render();detalhe(sel);cont();hojeBox()}
 det.onclick=e=>{const ax=e.target.closest("button[data-x]"),rx=e.target.closest("button[data-rx]");
  if(ax){XA.push({m:mk(ANO,MES),d:sel,k:ax.dataset.x,de:$("cov").value});ls.set("escala-x",XA);tudo();return}
@@ -100,15 +100,15 @@ function pdfBytes(){
  const cl=s=>String(s).replace(/[—–]/g,"-").replace(/[^\x00-\xFF]/g,"?").replace(/[\\()]/g,"\\$&");
  const T=(x,y,s,sz,b,w)=>{if(w)x+=(w-String(s).length*sz*(b?0.56:0.5))/2;c+=`BT /F${b?2:1} ${sz} Tf 0 g ${f1(x)} ${f1(H-y)} Td (${cl(s)}) Tj ET\n`};
  const B=(x,y,w,h,fill)=>{c+=`${fill} rg 0.5 G 0.5 w ${f1(x)} ${f1(H-y-h)} ${f1(w)} ${f1(h)} re B\n`};
- const col={D:"1 0.85 0.45",N:"0.62 0.72 1",F:"0.96 0.62 0.67",X:"0.45 0.88 0.6",we:"0.86 0.86 0.86",w:"1 1 1",h:"0.78 0.78 0.78"};
+ const col={D:"1 0.85 0.45",N:"0.62 0.72 1",F:"0.96 0.62 0.67",X:"0.45 0.88 0.6",we:"0.99 0.86 0.74",wh:"0.96 0.6 0.35",w:"1 1 1",h:"0.78 0.78 0.78"};
  const L7=["D","S","T","Q","Q","S","S"],wdOf=d=>new Date(ANO,MES,d).getDay();
  T(L,34,"Prefeitura de Imperatriz - Secretaria Municipal de Administração e Modernização",9,0);
  T(L,54,`VIGIA - ESCALA DE ${MN[MES].toUpperCase()} DE ${ANO}`,14,1);
  let y=66;
  B(L,y,NW,rh*2,col.h);T(L+6,y+rh+4,"FUNCIONÁRIOS",8,1);
- for(let d=1;d<=tot;d++){const x=L+NW+(d-1)*cw;
-  B(x,y,cw,rh,col.h);T(x,y+13,String(d),7,1,cw);
-  B(x,y+rh,cw,rh,col.h);T(x,y+rh+13,L7[wdOf(d)],7,1,cw)}
+ for(let d=1;d<=tot;d++){const x=L+NW+(d-1)*cw,hc=(wdOf(d)==0||wdOf(d)==6)?col.wh:col.h;
+  B(x,y,cw,rh,hc);T(x,y+13,String(d),7,1,cw);
+  B(x,y+rh,cw,rh,hc);T(x,y+rh+13,L7[wdOf(d)],7,1,cw)}
  y+=rh*2;
  const grupo=(tit,tp)=>{
   B(L,y,NW+tot*cw,15,"0.92 0.92 0.92");T(L+6,y+11,tit,8,1);y+=15;
@@ -121,35 +121,16 @@ function pdfBytes(){
    y+=rh});
  };
  grupo("ESCALA DIURNA","D");grupo("ESCALA NOTURNA","N");
- const TW=NW+tot*cw;
- const tw=(s,sz,b)=>String(s).length*sz*(b?0.56:0.5);
- y+=16;
- //Legenda com quadrinhos coloridos
- const leg=[["D","SD = Serviço diurno (07:00–19:00)"],["N","SN = Serviço noturno (19:00–07:00)"],["F","F = Férias"]];
- if(X.length)leg.push(["X","Verde = Plantão extra"]);
- let lx=L;
- leg.forEach(([k,txt])=>{B(lx,y-7,7,7,col[k]);T(lx+11,y,txt,7.5,0);lx+=11+tw(txt,7.5,0)+18});
- y+=16;
- //Férias em destaque
- if(ANO==2026&&MES==9&&Object.values(S[1]).includes("F")){
-  B(L,y,TW,15,col.F);T(L+7,y+10.5,"Férias: Antônio José Lobo da Silva — 10/09 a 09/10/2026 (referente ao período 2024/2025)",8,0);
-  y+=15+10}
- //Tabela de totais
- T(L,y,"TOTAL DE TURNOS NO MÊS",9,1);y+=10;
- const nameW=TW*0.4,colW=(TW-nameW)/4,heads=["SD","SN","Férias","Total"];
- B(L,y,nameW,15,col.h);T(L+7,y+10.5,"Funcionário",7.5,1);
- heads.forEach((h,idx)=>{const x=L+nameW+idx*colW;B(x,y,colW,15,col.h);T(x,y+10.5,h,7.5,1,colW)});
- y+=15;
- BASE.forEach((f,i)=>{
-  const v=Object.values(S[i]),n=k=>v.filter(z=>z==k).length,sd=n("D"),sn=n("N"),fe=n("F"),tt=sd+sn;
-  B(L,y,nameW,14,col.w);T(L+7,y+10,f.n,7.5,0);
-  [sd,sn,fe||"-",tt].forEach((val,idx)=>{const x=L+nameW+idx*colW;B(x,y,colW,14,col.w);T(x,y+10,String(val),7.5,idx==3?1:0,colW)});
-  y+=14});
- y+=10;
- //Plantões extras em destaque
- if(X.length){
-  B(L,y,TW,15,col.X);T(L+7,y+10.5,`Plantões extras: ${X.length}  (${X.filter(v=>v.k=="D").length} SD, ${X.filter(v=>v.k=="N").length} SN)`,8,1);
-  y+=15}
+ y+=22;const y0=y;
+ T(L,y,"LEGENDA",8,1);y+=8;
+ [[col.D,"SD - Serviço diurno (07:00 às 19:00)"],[col.N,"SN - Serviço noturno (19:00 às 07:00)"],[col.F,"F - Férias"],[col.wh,"Sábado e domingo"],[col.X,"Plantão extra"]].forEach(([c0,t0])=>{B(L,y,11,11,c0);T(L+17,y+9,t0,8,0);y+=15});
+ if(ANO==2026&&MES==9&&Object.values(S[1]).includes("F")){y+=6;B(L,y,300,36,col.F);T(L+8,y+15,"FÉRIAS: Antônio José Lobo da Silva",8.5,1);T(L+8,y+28,"10/09 a 09/10/2026 (referente 2024/2025)",8,1)}
+ let ty=y0;const tx=L+330,cws=[170,46,46,46,46,46];
+ T(tx,ty,"TOTAL DE TURNOS NO MÊS",8,1);ty+=8;
+ const row=(vals,fill,b)=>{let x=tx;vals.forEach((t,k)=>{B(x,ty,cws[k],rh,Array.isArray(fill)?fill[k]:fill);k?T(x,ty+13,String(t),7.5,b,cws[k]):T(x+5,ty+13,String(t),7.5,b);x+=cws[k]});ty+=rh};
+ row(["Funcionário","SD","SN","Extra","Férias","Total"],col.h,1);
+ BASE.forEach((f,i)=>{const v=Object.values(S[i]),n=k=>v.filter(z=>z==k).length,ex=i==EU?X.length:0;row([f.n,n("D"),n("N"),ex,n("F"),n("D")+n("N")+ex],[col.w,col.w,col.w,ex?col.X:col.w,col.w,col.w],0)});
+ if(X.length)T(tx,ty+12,`Extras: ${X.filter(v=>v.k=="D").length} SD + ${X.filter(v=>v.k=="N").length} SN, somados ao total de ${BASE[EU].n}`,7.5,0);
  T(L,H-20,"Gerado em "+new Date().toLocaleDateString("pt-BR"),7,0);
  const o=[];
  o[1]="<< /Type /Catalog /Pages 2 0 R >>";
