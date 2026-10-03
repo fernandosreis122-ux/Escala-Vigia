@@ -10,14 +10,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Escala Vigia – Outubro 2026</title>
-<link rel="stylesheet" href="css/style.css">
-
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="wrap">
 <header><small>Prefeitura de Imperatriz · SEMAD · Vigia</small><h1>Escala – <span id="tt"></span></h1><div class="bar"><button id="mp">◀ Mês anterior</button><button id="mx">Próximo mês ▶</button></div></header>
 <div class="box" id="hj" style="margin:0 0 12px"></div>
-<div class="box" id="vg" style="margin:0 0 12px;border-color:var(--n)"><h2>👤 Escolha o vigia</h2><div class="vg" id="vgc"></div></div>
+<div class="box" id="vg" style="margin:0 0 12px;border-color:var(--n)"><h2>👤 Escolha o vigia</h2><div class="vg" id="vgc"></div><div class="row" style="margin-top:12px"><label class="mut">Eu sou (para o PDF):</label><select id="eu"></select></div></div>
 <div class="bar">
 <select id="fil" style="display:none"><option value="">Todos os funcionários</option></select>
 <button data-v="mes" class="on">Mês</button>
@@ -45,7 +44,6 @@
 <div class="row"><button id="abr">📂 Abrir arquivo</button><button id="imp">Importar</button><button id="rst">Restaurar/limpar mês</button></div><input type="file" id="bf" accept=".json,.txt" style="display:none">
 </details>
 </div>
-<script src="js/app.js"></script>
-
+<script src="script.js"></script>
 </body>
 </html>

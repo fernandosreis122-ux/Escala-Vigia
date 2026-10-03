@@ -2,7 +2,7 @@ let ANO=2026,MES=9;const MN=["Janeiro","Fevereiro","Março","Abril","Maio","Junh
 const BASE=[
  {n:"Fernando Sales Reis",m:"85.329-2",v:"Nomeado",t:"D",dias:[2,5,7,9,11,13,15,19,21,25,27,29]},
  {n:"Antônio José Lobo da Silva",m:"38.310-4",v:"Efetivo",t:"D",dias:[10,12,14,18,20,22,26,28,30],ferias:[1,9]},
- {n:"Lucas Winnycius Silva Fernandes",m:"00.000-0",v:"Nomeado",t:"D",dias:[3,4,17,24,31]},
+ {n:"Lucas Winnycius Silva Fernandes",m:"85.329-2",v:"Nomeado",t:"D",dias:[3,4,17,24,31]},
  {n:"Renilson Alves Pereira",m:"35.778-2",v:"Efetivo",t:"N",dias:[1,4,6,7,10,13,16,19,22,25,28,31],sd:[6]},
  {n:"Valdiney Silva de Oliveira",m:"35.921-1",v:"Efetivo",t:"N",dias:[1,2,5,8,11,14,16,17,20,23,26,29],sd:[1,16]},
  {n:"Wilame dos Santos Pacheco",m:"35.974-2",v:"Efetivo",t:"N",dias:[3,6,8,9,12,15,18,21,23,24,27,30],sd:[8,23]}
@@ -18,6 +18,7 @@ function getS(y,m){const k=mk(y,m);if(!Array.isArray(ALL[k])||ALL[k].length!=BAS
 let S=getS(ANO,MES);
 const save=()=>ls.set("escala-all",ALL);
 let XA=ls.get("escala-x");if(!Array.isArray(XA))XA=[];XA=XA.map(v=>({m:"2026-10",...v}));
+let EU=ls.get("escala-eu");if(typeof EU!="number"||EU<0||EU>=BASE.length)EU=0;
 let X=[];const refX=()=>{X=XA.filter(x=>x.m==mk(ANO,MES))};refX();
 let tipo="",view="mes",edit=false,sel=null,wk=0;
 BASE.forEach((f,i)=>{fil.add(new Option(f.n,i))});
@@ -79,6 +80,7 @@ function vgChips(){
  $("vgc").innerHTML=`<button data-i="" class="${fil.value===""?"on":""}">Todos</button>`+BASE.map((f,i)=>`<button data-i="${i}" class="${f.t=="D"?"d":"n"} ${fil.value===String(i)?"on":""}">${f.t=="D"?"☀️":"🌙"} ${nm(f)}</button>`).join("");
 }
 $("vgc").onclick=e=>{const b=e.target.closest("button");if(!b)return;const v=b.dataset.i;fil.value=(v!==""&&fil.value===v)?"":v;vgChips();render()};
+$("eu").innerHTML=BASE.map((f,i)=>`<option value="${i}">${f.n}</option>`).join("");$("eu").value=EU;$("eu").onchange=()=>{EU=+$("eu").value;ls.set("escala-eu",EU)};
 function tudo(){vgChips();refX();$("tt").textContent=MN[MES]+" de "+ANO;render();detalhe(sel);cont();hojeBox()}
 det.onclick=e=>{const ax=e.target.closest("button[data-x]"),rx=e.target.closest("button[data-rx]");
  if(ax){XA.push({m:mk(ANO,MES),d:sel,k:ax.dataset.x,de:$("cov").value});ls.set("escala-x",XA);tudo();return}
@@ -112,24 +114,42 @@ function pdfBytes(){
   B(L,y,NW+tot*cw,15,"0.92 0.92 0.92");T(L+6,y+11,tit,8,1);y+=15;
   BASE.forEach((f,i)=>{if(f.t!=tp)return;
    B(L,y,NW,rh,col.w);T(L+4,y+13,f.n,7.5,0);
-   for(let d=1;d<=tot;d++){const x=L+NW+(d-1)*cw,k=S[i][d],w=wdOf(d);
-    B(x,y,cw,rh,k?col[k]:(w==0||w==6?col.we:col.w));
-    if(k)T(x,y+13,k=="F"?"F":k=="D"?"SD":"SN",6.5,1,cw)}
+   for(let d=1;d<=tot;d++){const x=L+NW+(d-1)*cw,k=S[i][d],w=wdOf(d),ex=i==EU?X.filter(v=>v.d==d).map(v=>xl(v.k)):[],lab=k=="F"?"F":k=="D"?"SD":"SN",et=ex.join("+");
+    if(k&&ex.length){B(x,y,cw/2,rh,col[k]);B(x+cw/2,y,cw/2,rh,col.X);T(x,y+13,lab,5,1,cw/2);T(x+cw/2,y+13,et,et.length>2?4:5,1,cw/2)}
+    else if(ex.length){B(x,y,cw,rh,col.X);T(x,y+13,et,et.length>2?5:6.5,1,cw)}
+    else{B(x,y,cw,rh,k?col[k]:(w==0||w==6?col.we:col.w));if(k)T(x,y+13,lab,6.5,1,cw)}}
    y+=rh});
  };
  grupo("ESCALA DIURNA","D");grupo("ESCALA NOTURNA","N");
+ const TW=NW+tot*cw;
+ const tw=(s,sz,b)=>String(s).length*sz*(b?0.56:0.5);
+ y+=16;
+ //Legenda com quadrinhos coloridos
+ const leg=[["D","SD = Serviço diurno (07:00–19:00)"],["N","SN = Serviço noturno (19:00–07:00)"],["F","F = Férias"]];
+ if(X.length)leg.push(["X","Verde = Plantão extra"]);
+ let lx=L;
+ leg.forEach(([k,txt])=>{B(lx,y-7,7,7,col[k]);T(lx+11,y,txt,7.5,0);lx+=11+tw(txt,7.5,0)+18});
+ y+=16;
+ //Férias em destaque
+ if(ANO==2026&&MES==9&&Object.values(S[1]).includes("F")){
+  B(L,y,TW,15,col.F);T(L+7,y+10.5,"Férias: Antônio José Lobo da Silva — 10/09 a 09/10/2026 (referente ao período 2024/2025)",8,0);
+  y+=15+10}
+ //Tabela de totais
+ T(L,y,"TOTAL DE TURNOS NO MÊS",9,1);y+=10;
+ const nameW=TW*0.4,colW=(TW-nameW)/4,heads=["SD","SN","Férias","Total"];
+ B(L,y,nameW,15,col.h);T(L+7,y+10.5,"Funcionário",7.5,1);
+ heads.forEach((h,idx)=>{const x=L+nameW+idx*colW;B(x,y,colW,15,col.h);T(x,y+10.5,h,7.5,1,colW)});
+ y+=15;
+ BASE.forEach((f,i)=>{
+  const v=Object.values(S[i]),n=k=>v.filter(z=>z==k).length,sd=n("D"),sn=n("N"),fe=n("F"),tt=sd+sn;
+  B(L,y,nameW,14,col.w);T(L+7,y+10,f.n,7.5,0);
+  [sd,sn,fe||"-",tt].forEach((val,idx)=>{const x=L+nameW+idx*colW;B(x,y,colW,14,col.w);T(x,y+10,String(val),7.5,idx==3?1:0,colW)});
+  y+=14});
+ y+=10;
+ //Plantões extras em destaque
  if(X.length){
-  B(L,y,NW,rh,col.X);T(L+4,y+13,"PLANTÃO EXTRA (MEU)",7.5,1);
-  for(let d=1;d<=tot;d++){const x=L+NW+(d-1)*cw,k=X.filter(v=>v.d==d).map(v=>v.k=="D"?"SD":"SN").join("+");
-   B(x,y,cw,rh,k?col.X:col.w);if(k)T(x,y+13,k,k.length>2?5:6.5,1,cw)}
-  y+=rh;
- }
- y+=18;
- T(L,y,"SD = Serviço diurno (07:00 as 19:00)     SN = Serviço noturno (19:00 as 07:00)     F = Férias"+(X.length?"     Verde = plantão extra":""),8,0);y+=14;
- if(ANO==2026&&MES==9&&Object.values(S[1]).includes("F")){T(L,y,"Férias: Antônio José Lobo da Silva - 10/09 a 09/10/2026 (referente 2024/2025)",8,0);y+=14}
- T(L,y,"Total de turnos no mês:",8,1);y+=11;
- BASE.forEach((f,i)=>{const v=Object.values(S[i]),n=k=>v.filter(z=>z==k).length;T(L,y,`${f.n}: ${n("D")} SD, ${n("N")} SN`+(n("F")?`, ${n("F")} dias de férias`:""),8,0);y+=11});
- if(X.length){T(L,y,`Plantões extras: ${X.length} (${X.filter(v=>v.k=="D").length} SD, ${X.filter(v=>v.k=="N").length} SN)`,8,0);y+=11}
+  B(L,y,TW,15,col.X);T(L+7,y+10.5,`Plantões extras: ${X.length}  (${X.filter(v=>v.k=="D").length} SD, ${X.filter(v=>v.k=="N").length} SN)`,8,1);
+  y+=15}
  T(L,H-20,"Gerado em "+new Date().toLocaleDateString("pt-BR"),7,0);
  const o=[];
  o[1]="<< /Type /Catalog /Pages 2 0 R >>";
