@@ -41,9 +41,18 @@ const xdet=(d,ed)=>xs(d).map(x=>`<div><i class="dot" style="background:var(--x)"
 const ini=n=>{const p=n.split(" ");return p[0][0]+p[p.length-1][0]};
 const chip=(t,full)=>`<span class="chip ${t.k}" title="${t.f.n}"><span class="full">${t.l} ${full?t.f.n:t.f.n.split(" ")[0]}</span><span class="ini">${t.k=="F"?"Fér":t.l} ${ini(t.f.n)}</span></span>`;
 function hojeBox(){
- const el=$("hj");if(hoje.getFullYear()!=ANO||hoje.getMonth()!=MES){el.style.display="none";return}
- const d=hoje.getDate(),t=[];BASE.forEach((f,i)=>{const k=S[i][d];if(k)t.push({f,k,l:LB[k]})});
- el.innerHTML=`<h2>Hoje · ${SEM[hoje.getDay()]}, ${String(d).padStart(2,"0")}/${String(MES+1).padStart(2,"0")}</h2>`+(t.length?t.map(x=>`<div class="li"><i class="dot" style="background:var(--${x.k.toLowerCase()})"></i><b>${x.f.n}</b> — ${x.k=="D"?"SD (07:00–19:00)":x.k=="N"?"SN (19:00–07:00)":"Férias"}</div>`).join(""):"<span class='mut'>Ninguém escalado hoje.</span>")+xs(d).map(x=>`<div class="li"><i class="dot" style="background:var(--x)"></i><b>Seu plantão extra</b> — ${x.k=="D"?"SD (07:00–19:00)":"SN (19:00–07:00)"}</div>`).join("");
+ const el=$("hj");
+ if(hoje.getFullYear()!=ANO||hoje.getMonth()!=MES){el.className="hero off";el.innerHTML=`<div class="hh"><span class="hi">📅</span><div><b>${MN[MES]} de ${ANO}</b><small>Toque em um dia para ver quem está de plantão.</small></div></div>`;return}
+ const d=hoje.getDate(),hr=hoje.getHours(),noite=hr>=19||hr<7,t=[];
+ BASE.forEach((f,i)=>{const k=S[i][d];if(k)t.push({f,k})});
+ const li=(x,c)=>`<li><i class="dot ${c}"></i>${x.f.n}</li>`,vazio="<li class='mut'>Ninguém</li>";
+ const dia=t.filter(x=>x.k=="D"),nit=t.filter(x=>x.k=="N"),fer=t.filter(x=>x.k=="F"),ex=xs(d);
+ el.className="hero "+(noite?"night":"day");
+ el.innerHTML=`<div class="hh"><span class="hi">${noite?"🌙":"☀️"}</span><div><small>Hoje</small><b>${SEM[hoje.getDay()]}, ${String(d).padStart(2,"0")} de ${MN[MES].toLowerCase()}</b></div></div>
+<div class="cols"><div><h3>Diurno<small>07h às 19h</small></h3><ul>${dia.map(x=>li(x,"D")).join("")||vazio}</ul></div>
+<div><h3>Noturno<small>19h às 07h</small></h3><ul>${nit.map(x=>li(x,"N")).join("")||vazio}</ul></div></div>`
+ +(fer.length?`<p class="note f">Em férias: ${fer.map(x=>x.f.n.split(" ")[0]).join(", ")}</p>`:"")
+ +(ex.length?`<p class="note x">Seu plantão extra: ${ex.map(x=>xl(x.k)).join(" + ")}</p>`:"");
 }
 function render(){
  const ini=new Date(ANO,MES,1).getDay(),tot=new Date(ANO,MES+1,0).getDate();
@@ -89,7 +98,16 @@ function vgChips(){
 }
 $("vgc").onclick=e=>{const b=e.target.closest("button");if(!b)return;const v=b.dataset.i;fil.value=(v!==""&&fil.value===v)?"":v;vgChips();render()};
 const eufill=()=>{$("eu").innerHTML=BASE.map((f,i)=>`<option value="${i}">${f.n}</option>`).join("");$("eu").value=EU};eufill();$("eu").onchange=()=>{EU=+$("eu").value;ls.set("escala-eu",EU);cont()};
-function tudo(){vgChips();refX();$("tt").textContent=MN[MES]+" de "+ANO;render();detalhe(sel);cont();hojeBox();rosFill()}
+function hasData(k){return Array.isArray(ALL[k])&&ALL[k].some(o=>Object.keys(o).length>0)}
+function monFill(){
+ const idx=Object.keys(ALL).map(k=>{const p=k.split("-");return +p[0]*12+ +p[1]-1});
+ const a=Math.min(2026*12+7,...idx),b=Math.max(2027*12+1,...idx),out=[];
+ for(let v=a;v<=b;v++){const y=Math.floor(v/12),m=v%12,k=mk(y,m);out.push(`<option value="${k}">${MN[m]} ${y}${hasData(k)?" ✓":" · sem escala"}</option>`)}
+ $("mes").innerHTML=out.join("");$("mes").value=mk(ANO,MES);
+ const vz=$("vaz"),e=!hasData(mk(ANO,MES));vz.style.display=e?"":"none";
+ if(e)vz.innerHTML=`📭 Ainda não há escala de <b>${MN[MES]} de ${ANO}</b>. Quando chegar, importe o arquivo em <i>Backup</i> ou preencha pelo <b>✏️ Editar</b>.`;
+}
+function tudo(){monFill();vgChips();refX();$("tt").textContent=MN[MES]+" de "+ANO;render();detalhe(sel);cont();hojeBox();rosFill()}
 det.onclick=e=>{const ax=e.target.closest("button[data-x]"),rx=e.target.closest("button[data-rx]");
  if(ax){XA.push({m:mk(ANO,MES),d:sel,k:ax.dataset.x,de:$("cov").value});ls.set("escala-x",XA);tudo();return}
  if(rx){XA.splice(+rx.dataset.rx,1);ls.set("escala-x",XA);tudo();return}
@@ -175,8 +193,8 @@ $("cop").onclick=async()=>{const t=bkTxt();$("bk").value=t;
  try{await navigator.clipboard.writeText(t);alert("Backup copiado.")}catch(e){$("bk").select();try{document.execCommand("copy");alert("Backup copiado.")}catch(e2){alert("Selecione o texto e copie manualmente.")}}};
 $("dbk").onclick=()=>salvar("backup-escala-vigia.json",bkTxt(),"application/json");
 $("abr").onclick=()=>$("bf").click();
-$("bf").onchange=e=>{const f=e.target.files[0];if(f)f.text().then(t=>{$("bk").value=t})};
-$("imp").onclick=()=>{try{const x=JSON.parse($("bk").value);let A,XX=[];
+$("bf").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$("bk").value=String(r.result);$("imp").onclick()};r.onerror=()=>alert("Não consegui ler o arquivo.");r.readAsText(f);e.target.value=""};
+$("imp").onclick=()=>{try{const x=JSON.parse($("bk").value.replace(/^\uFEFF/,"").trim());let A,XX=[];
  if(Array.isArray(x))A={"2026-10":x};else if(x.ALL){A=x.ALL;XX=x.X||[]}else A={"2026-10":x.S};
  if(x.merge){
   let map=null;
@@ -194,9 +212,11 @@ $("imp").onclick=()=>{try{const x=JSON.parse($("bk").value);let A,XX=[];
  }
  ls.set("escala-emp",BASE);ls.set("escala-fer",FER);ls.set("escala-hid",HID);
  S=getS(ANO,MES);sel=(hoje.getFullYear()==ANO&&hoje.getMonth()==MES)?hoje.getDate():1;wk=sel-new Date(ANO,MES,sel).getDay();
- save();ls.set("escala-x",XA);fillSel();eufill();rosFill();tudo();if(x.merge)alert("Escala de "+MN[MES]+" de "+ANO+" importada.")}catch(e){alert("Texto de backup inválido.")}};
+ save();ls.set("escala-x",XA);fillSel();eufill();rosFill();tudo();alert(x.merge?"Escala de "+MN[MES]+" de "+ANO+" importada.":"Backup restaurado.")}catch(e){alert("Não foi possível importar. Escolha um arquivo de backup .json ou cole o texto completo do backup.")}};
 $("rst").onclick=()=>{if(confirm(ANO==2026&&MES==9?"Voltar este mês à escala original da foto?":"Limpar a escala deste mês?")){ALL[mk(ANO,MES)]=(ANO==2026&&MES==9)?base():empty();S=ALL[mk(ANO,MES)];save();tudo()}};
-const goM=n=>{const d=new Date(ANO,MES+n,1);ANO=d.getFullYear();MES=d.getMonth();S=getS(ANO,MES);sel=(hoje.getFullYear()==ANO&&hoje.getMonth()==MES)?hoje.getDate():1;wk=sel-new Date(ANO,MES,sel).getDay();tudo()};
+const irMes=(y,m)=>{ANO=y;MES=m;S=getS(y,m);sel=(hoje.getFullYear()==y&&hoje.getMonth()==m)?hoje.getDate():1;wk=sel-new Date(y,m,sel).getDay();tudo()};
+const goM=n=>{const d=new Date(ANO,MES+n,1);irMes(d.getFullYear(),d.getMonth())};
+$("mes").onchange=()=>{const p=$("mes").value.split("-");irMes(+p[0],+p[1]-1)};
 $("mp").onclick=()=>goM(-1);$("mx").onclick=()=>goM(1);
 sel=(hoje.getFullYear()==ANO&&hoje.getMonth()==MES)?hoje.getDate():1;
 tudo();
@@ -232,3 +252,8 @@ $("ros").onclick=e=>{const d=e.target.closest("button[data-del]"),hd=e.target.cl
  if(hd){const f=BASE[+hd.dataset.hide],k=mk(ANO,MES),l=HID[k]||[];HID[k]=l.includes(f.id)?l.filter(z=>z!=f.id):[...l,f.id];ls.set("escala-hid",HID);tudo()}};
 $("addv").onclick=()=>{BASE.push({n:"Novo vigia",m:"",v:"Efetivo",t:"D"});ensureIds();Object.keys(ALL).forEach(k=>pad(ALL[k]));save();rosFill();rosChanged()};
 rosFill();
+
+// abas
+const tabs=document.querySelectorAll("[data-tab]");
+function showTab(n){document.querySelectorAll("[data-pane]").forEach(p=>{p.hidden=p.dataset.pane!=n});tabs.forEach(b=>b.classList.toggle("on",b.dataset.tab==n));try{scrollTo(0,0)}catch(e){}}
+tabs.forEach(b=>{b.onclick=()=>showTab(b.dataset.tab)});

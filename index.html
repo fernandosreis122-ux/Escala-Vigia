@@ -3,52 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0e1116">
+<meta name="theme-color" content="#0c111c">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Escala Vigia – Outubro 2026</title>
+<title>Escala Vigia</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="wrap">
-<header><small>Prefeitura de Imperatriz · SEMAD · Vigia</small><h1>Escala – <span id="tt"></span></h1><div class="bar"><button id="mp">◀ Mês anterior</button><button id="mx">Próximo mês ▶</button></div></header>
-<div class="box" id="hj" style="margin:0 0 12px"></div>
-<div class="box" id="vg" style="margin:0 0 12px;border-color:var(--n)"><h2>👤 Escolha o vigia</h2><div class="vg" id="vgc"></div><div class="row" style="margin-top:12px"><label class="mut">Eu sou (para o PDF):</label><select id="eu"></select></div></div>
-<div class="bar">
-<select id="fil" style="display:none"><option value="">Todos os funcionários</option></select>
-<button data-v="mes" class="on">Mês</button>
-<button data-v="sem">Semana</button>
-<button data-t="" class="on">Todos</button>
-<button data-t="D">Diurno</button>
-<button data-t="N">Noturno</button>
-<button id="ed">✏️ Editar</button>
-<button id="pdf">⬇️ Baixar escala (PDF)</button>
-<button id="shr" style="display:none">📤 Compartilhar</button>
-</div>
-<div class="leg">
-<span><i class="dot" style="background:var(--d)"></i>SD – Diurno 07:00–19:00</span>
-<span><i class="dot" style="background:var(--n)"></i>SN – Noturno 19:00–07:00</span>
-<span><i class="dot" style="background:var(--f)"></i>Férias</span>
-<span><i class="dot" style="background:var(--x)"></i>Plantão extra (meu)</span>
-</div>
-<div class="grid" id="g"></div>
-<div class="box" id="det"></div>
-<div class="box"><h2>Turnos no mês</h2><div id="cnt"></div></div>
-<details class="box"><summary>👥 Gerenciar vigias</summary>
-<p class="mut">Se a escala mudar de vigia, edite aqui. Quando alguém sai, desmarque <b>Ativo</b> e adicione o novo vigia: assim os meses anteriores continuam corretos. Só renomeie para corrigir um nome. Para tirar um vigia só de um mês, use <b>🙈 Tirar de [mês]</b> (os dados ficam guardados e dá para mostrar de novo). <b>🗑️ Remover de todos</b> apaga o vigia e os plantões dele em todos os meses.</p>
-<div id="ros"></div>
-<div class="row"><button id="addv">➕ Adicionar vigia</button></div>
-</details>
-<details class="box"><summary>💾 Backup da escala</summary>
-<p class="mut">Suas edições ficam salvas neste aparelho. Use o backup para levar para outro.</p>
-<textarea id="bk"></textarea>
-<div class="row"><button id="cop">📋 Copiar backup</button><button id="dbk">💾 Baixar backup</button><button id="exp">Mostrar</button></div>
-<div class="row"><button id="abr">📂 Abrir arquivo</button><button id="imp">Importar</button><button id="rst">Restaurar/limpar mês</button></div><input type="file" id="bf" accept=".json,.txt" style="display:none">
-</details>
-</div>
+<main class="app">
+
+<section data-pane="escala">
+  <header class="top">
+    <button class="ic" id="mp" aria-label="Mês anterior">‹</button>
+    <h1 id="tt"></h1>
+    <button class="ic" id="mx" aria-label="Próximo mês">›</button>
+  </header>
+
+  <select id="mes" class="monsel" aria-label="Ir para o mês"></select>
+
+  <div class="hero" id="hj"></div>
+
+  <select id="fil" hidden></select>
+  <div class="pills" id="vgc" aria-label="Escolha o vigia"></div>
+
+  <div class="tools">
+    <div class="sc" role="group" aria-label="Visão">
+      <button data-v="mes" class="on">Mês</button>
+      <button data-v="sem">Semana</button>
+    </div>
+    <div class="sc" role="group" aria-label="Turno">
+      <button data-t="" class="on">Todos</button>
+      <button data-t="D">Dia</button>
+      <button data-t="N">Noite</button>
+    </div>
+    <button id="ed" class="tg">✏️ Editar</button>
+  </div>
+
+  <div class="leg">
+    <span><i class="dot D"></i>SD diurno, 07h às 19h</span>
+    <span><i class="dot N"></i>SN noturno, 19h às 07h</span>
+    <span><i class="dot F"></i>Férias</span>
+    <span><i class="dot X"></i>Plantão extra</span>
+  </div>
+
+  <div class="card vazio" id="vaz" style="display:none"></div>
+  <div class="grid" id="g"></div>
+  <div class="card" id="det"></div>
+</section>
+
+<section data-pane="totais" hidden>
+  <h2 class="ph">Totais do mês</h2>
+  <div class="card" id="cnt"></div>
+</section>
+
+<section data-pane="ajustes" hidden>
+  <h2 class="ph">Ajustes</h2>
+
+  <div class="card">
+    <h3>Escala em PDF</h3>
+    <p class="mut">Baixa o mês que está aberto, pronto para imprimir ou enviar.</p>
+    <div class="row"><button id="pdf" class="primary">⬇️ Baixar escala (PDF)</button><button id="shr" style="display:none">📤 Compartilhar</button></div>
+  </div>
+
+  <div class="card">
+    <h3>Quem sou eu</h3>
+    <p class="mut">Seus plantões extras ficam na sua linha e somam no seu total.</p>
+    <div class="row"><select id="eu"></select></div>
+  </div>
+
+  <details class="card">
+    <summary>👥 Gerenciar vigias</summary>
+    <p class="mut">Se a escala mudar de vigia, edite aqui. Quando alguém sai, desmarque <b>Ativo</b> e adicione o novo vigia: assim os meses anteriores continuam corretos. Só renomeie para corrigir um nome. Para tirar um vigia só de um mês, use <b>🙈 Tirar de [mês]</b> (os dados ficam guardados e dá para mostrar de novo). <b>🗑️ Remover de todos</b> apaga o vigia e os plantões dele em todos os meses.</p>
+    <div id="ros"></div>
+    <div class="row"><button id="addv">➕ Adicionar vigia</button></div>
+  </details>
+
+  <details class="card">
+    <summary>💾 Backup da escala</summary>
+    <p class="mut">Suas edições ficam salvas neste aparelho. Use o backup para levar para outro.</p>
+    <textarea id="bk"></textarea>
+    <div class="row"><button id="cop">📋 Copiar backup</button><button id="dbk">💾 Baixar backup</button><button id="exp">Mostrar</button></div>
+    <div class="row"><button id="abr">📂 Abrir arquivo</button><button id="imp">Importar</button><button id="rst">Restaurar/limpar mês</button></div>
+    <input type="file" id="bf" accept=".json,.txt" style="display:none">
+  </details>
+</section>
+
+</main>
+
+<nav class="tabbar" aria-label="Seções">
+  <button data-tab="escala" class="on"><span>📅</span>Escala</button>
+  <button data-tab="totais"><span>📊</span>Totais</button>
+  <button data-tab="ajustes"><span>⚙️</span>Ajustes</button>
+</nav>
+
 <script src="app.js"></script>
 </body>
 </html>
