@@ -107,7 +107,7 @@ function monFill(){
  const vz=$("vaz"),e=!hasData(mk(ANO,MES));vz.style.display=e?"":"none";
  if(e)vz.innerHTML=`📭 Ainda não há escala de <b>${MN[MES]} de ${ANO}</b>. Quando chegar, importe o arquivo em <i>Backup</i> ou preencha pelo <b>✏️ Editar</b>.`;
 }
-function tudo(){monFill();vgChips();refX();$("tt").textContent=MN[MES]+" de "+ANO;render();detalhe(sel);cont();hojeBox();rosFill()}
+function tudo(){monFill();vgChips();refX();$("tt").textContent=MN[MES]+" de "+ANO;render();detalhe(sel);cont();hojeBox();rosFill();pdfFill()}
 det.onclick=e=>{const ax=e.target.closest("button[data-x]"),rx=e.target.closest("button[data-rx]");
  if(ax){XA.push({m:mk(ANO,MES),d:sel,k:ax.dataset.x,de:$("cov").value});ls.set("escala-x",XA);tudo();return}
  if(rx){XA.splice(+rx.dataset.rx,1);ls.set("escala-x",XA);tudo();return}
@@ -178,11 +178,26 @@ async function salvar(nm,data,mime){
  const u=URL.createObjectURL(new Blob([data],{type:mime})),a=document.createElement("a");
  a.href=u;a.download=nm;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);
 }
-const baixar=()=>salvar(nome(),pdfBytes(),"application/pdf");
-async function compartilhar(){
- const f=new File([pdfBytes()],nome(),{type:"application/pdf"});
- try{await navigator.share({files:[f],title:"Escala Vigia - "+MN[MES]+" "+ANO})}catch(e){}
+let pdfSel=null;
+function pdfMes(){
+ const v=($("pdfmes").value||mk(ANO,MES)).split("-"),y=+v[0],m=+v[1]-1,oa=ANO,om=MES,os=S;
+ ANO=y;MES=m;S=getS(y,m);refX();
+ try{return{bytes:pdfBytes(),nome:nome()}}finally{ANO=oa;MES=om;S=os;refX()}
 }
+const baixar=()=>{const r=pdfMes();return salvar(r.nome,r.bytes,"application/pdf")};
+async function compartilhar(){
+ const r=pdfMes(),f=new File([r.bytes],r.nome,{type:"application/pdf"});
+ try{await navigator.share({files:[f],title:"Escala Vigia"})}catch(e){}
+}
+function pdfFill(){
+ const ks=new Set([mk(ANO,MES)]);
+ Object.keys(ALL).forEach(k=>{if(Array.isArray(ALL[k])&&ALL[k].some(o=>Object.keys(o).length))ks.add(k)});
+ const lista=[...ks].sort(),cur=pdfSel&&ks.has(pdfSel)?pdfSel:mk(ANO,MES);
+ $("pdfmes").innerHTML=lista.map(k=>`<option value="${k}">${MN[+k.slice(5)-1]} de ${k.slice(0,4)}</option>`).join("");
+ $("pdfmes").value=cur;
+ $("pdf").textContent="⬇️ Baixar escala de "+MN[+cur.slice(5)-1]+" (PDF)";
+}
+$("pdfmes").onchange=()=>{pdfSel=$("pdfmes").value;pdfFill()};
 //PDF-END
 $("pdf").onclick=baixar;$("shr").onclick=compartilhar;
 try{if(!window.claude&&navigator.canShare&&navigator.canShare({files:[new File(["x"],"a.pdf",{type:"application/pdf"})]}))$("shr").style.display=""}catch(e){}
@@ -215,7 +230,7 @@ $("imp").onclick=()=>{try{const x=JSON.parse($("bk").value.replace(/^\uFEFF/,"")
  save();ls.set("escala-x",XA);fillSel();eufill();rosFill();tudo();alert(x.merge?"Escala de "+MN[MES]+" de "+ANO+" importada.":"Backup restaurado.")}catch(e){alert("Não foi possível importar. Escolha um arquivo de backup .json ou cole o texto completo do backup.")}};
 $("rst").onclick=()=>{if(confirm(ANO==2026&&MES==9?"Voltar este mês à escala original da foto?":"Limpar a escala deste mês?")){ALL[mk(ANO,MES)]=(ANO==2026&&MES==9)?base():empty();S=ALL[mk(ANO,MES)];save();tudo()}};
 const irMes=(y,m)=>{ANO=y;MES=m;S=getS(y,m);sel=(hoje.getFullYear()==y&&hoje.getMonth()==m)?hoje.getDate():1;wk=sel-new Date(y,m,sel).getDay();tudo()};
-const goM=n=>{const d=new Date(ANO,MES+n,1);irMes(d.getFullYear(),d.getMonth())};
+const goM=n=>{pdfSel=null;const d=new Date(ANO,MES+n,1);irMes(d.getFullYear(),d.getMonth())};
 $("mes").onchange=()=>{const p=$("mes").value.split("-");irMes(+p[0],+p[1]-1)};
 $("mp").onclick=()=>goM(-1);$("mx").onclick=()=>goM(1);
 sel=(hoje.getFullYear()==ANO&&hoje.getMonth()==MES)?hoje.getDate():1;
