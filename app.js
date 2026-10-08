@@ -15,6 +15,10 @@ const pad=a=>{while(a.length<BASE.length)a.push({});return a};
 const norm=s=>String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
 let FER=ls.get("escala-fer")||{"2026-10":[{n:"Antônio José Lobo da Silva",p:"10/09 a 09/10/2026",r:"2024/2025"}]};
 let HID=ls.get("escala-hid")||{};
+let corVig=ls.get("escala-corvig")===true;
+const PALETA=["#5b8fd9","#8f5bd9","#2fb8a8","#c9a227","#d9549c","#8ab833","#cc66e0","#34b5d8"];
+const COR_NOME={fernando:"#5b8fd9",antonio:"#8f5bd9",renilson:"#2fb8a8",valdiney:"#c9a227",wilame:"#8b5a2b",jose:"#8ab833",lucas:"#cc66e0",israel:"#34b5d8"};
+const corDe=i=>{const f=BASE[i]||{};return f.cor||COR_NOME[norm(String(f.n||"").split(" ")[0])]||PALETA[i%PALETA.length]};
 function ensureIds(){let ch=false,n=1;BASE.forEach(b=>{if(!b.id){let id;do{id="e"+n++}while(BASE.some(x=>x.id==id));b.id=id;ch=true}});if(ch)ls.set("escala-emp",BASE)}ensureIds();
 function base(){return pad(INIT.map(f=>{const o={};f.dias.forEach(d=>o[d]=(f.t=="D"||(f.sd&&f.sd.includes(d)))?"D":"N");if(f.ferias)for(let d=f.ferias[0];d<=f.ferias[1];d++)o[d]="F";return o}))}
 const empty=()=>BASE.map(()=>({})),mk=(y,m)=>y+"-"+String(m+1).padStart(2,"0");
@@ -126,6 +130,8 @@ function pdfBytes(){
  const cl=s=>String(s).replace(/[—–]/g,"-").replace(/[^\x00-\xFF]/g,"?").replace(/[\\()]/g,"\\$&");
  const T=(x,y,s,sz,b,w)=>{if(w)x+=(w-String(s).length*sz*(b?0.56:0.5))/2;c+=`BT /F${b?2:1} ${sz} Tf 0 g ${f1(x)} ${f1(H-y)} Td (${cl(s)}) Tj ET\n`};
  const B=(x,y,w,h,fill)=>{c+=`${fill} rg 0.5 G 0.5 w ${f1(x)} ${f1(H-y-h)} ${f1(w)} ${f1(h)} re B\n`};
+ const vc=(i,k)=>{const x=corDe(i),m=k=="D"?0.45:1,c=n=>(m*parseInt(x.slice(n,n+2),16)/255+(1-m)).toFixed(2);return c(1)+" "+c(3)+" "+c(5)};
+ const cc=(i,k)=>corVig&&(k=="D"||k=="N")?vc(i,k):col[k];
  const col={D:"1 0.85 0.45",N:"0.62 0.72 1",F:"0.96 0.62 0.67",X:"0.45 0.88 0.6",we:"0.99 0.86 0.74",wh:"0.96 0.6 0.35",w:"1 1 1",h:"0.78 0.78 0.78"};
  const L7=["D","S","T","Q","Q","S","S"],wdOf=d=>new Date(ANO,MES,d).getDay();
  T(L,34,"Prefeitura de Imperatriz - Secretaria Municipal de Administração e Modernização",9,0);
@@ -139,23 +145,29 @@ function pdfBytes(){
  const grupo=(tit,tp)=>{
   B(L,y,NW+tot*cw,15,"0.92 0.92 0.92");T(L+6,y+11,tit,8,1);y+=15;
   BASE.forEach((f,i)=>{if(f.t!=tp||!vis(i))return;
-   B(L,y,NW,rh,col.w);T(L+4,y+13,f.n,7.5,0);
+   B(L,y,NW,rh,col.w);if(corVig){B(L+4,y+5,9,10,vc(i,"D"));B(L+13,y+5,9,10,vc(i,"N"))}T(L+(corVig?27:4),y+13,f.n,7.5,0);
    for(let d=1;d<=tot;d++){const x=L+NW+(d-1)*cw,k=S[i][d],w=wdOf(d),ex=i==EU?X.filter(v=>v.d==d).map(v=>xl(v.k)):[],lab=k=="F"?"F":k=="D"?"SD":"SN",et=ex.join("+");
-    if(k&&ex.length){B(x,y,cw/2,rh,col[k]);B(x+cw/2,y,cw/2,rh,col.X);T(x,y+13,lab,5,1,cw/2);T(x+cw/2,y+13,et,et.length>2?4:5,1,cw/2)}
+    if(k&&ex.length){B(x,y,cw/2,rh,cc(i,k));B(x+cw/2,y,cw/2,rh,col.X);T(x,y+13,lab,5,1,cw/2);T(x+cw/2,y+13,et,et.length>2?4:5,1,cw/2)}
     else if(ex.length){B(x,y,cw,rh,col.X);T(x,y+13,et,et.length>2?5:6.5,1,cw)}
-    else{B(x,y,cw,rh,k?col[k]:(w==0||w==6?col.we:col.w));if(k)T(x,y+13,lab,6.5,1,cw)}}
+    else{B(x,y,cw,rh,k?cc(i,k):(w==0||w==6?col.we:col.w));if(k)T(x,y+13,lab,6.5,1,cw)}}
    y+=rh});
  };
  grupo("ESCALA DIURNA","D");grupo("ESCALA NOTURNA","N");
  y+=22;const y0=y;
  T(L,y,"LEGENDA",8,1);y+=8;
- [[col.D,"SD - Serviço diurno (07:00 às 19:00)"],[col.N,"SN - Serviço noturno (19:00 às 07:00)"],[col.F,"F - Férias"],[col.wh,"Sábado e domingo"],[col.X,"Plantão extra"]].forEach(([c0,t0])=>{B(L,y,11,11,c0);T(L+17,y+9,t0,8,0);y+=15});
+ if(corVig){
+  T(L,y+9,"Cada vigia tem uma cor: tom claro = SD, tom escuro = SN",8,0);y+=15;
+  BASE.forEach((f,i)=>{if(!vis(i))return;B(L,y,11,11,vc(i,"D"));B(L+11,y,11,11,vc(i,"N"));T(L+30,y+9,f.n,8,0);y+=14});
+  y+=2;[[col.F,"F - Férias"],[col.wh,"Sábado e domingo"],[col.X,"Plantão extra"]].forEach(([c0,t0])=>{B(L,y,11,11,c0);T(L+17,y+9,t0,8,0);y+=15});
+ }else{
+  [[col.D,"SD - Serviço diurno (07:00 às 19:00)"],[col.N,"SN - Serviço noturno (19:00 às 07:00)"],[col.F,"F - Férias"],[col.wh,"Sábado e domingo"],[col.X,"Plantão extra"]].forEach(([c0,t0])=>{B(L,y,11,11,c0);T(L+17,y+9,t0,8,0);y+=15});
+ }
  (FER[mk(ANO,MES)]||[]).forEach(e=>{y+=6;B(L,y,300,36,col.F);T(L+8,y+15,"FÉRIAS: "+e.n,8.5,1);T(L+8,y+28,e.p+(e.r?" (referente "+e.r+")":""),8,1);y+=36});
  let ty=y0;const tx=L+330,cws=[170,46,46,46,46,46];
  T(tx,ty,"TOTAL DE TURNOS NO MÊS",8,1);ty+=8;
- const row=(vals,fill,b)=>{let x=tx;vals.forEach((t,k)=>{B(x,ty,cws[k],rh,Array.isArray(fill)?fill[k]:fill);k?T(x,ty+13,String(t),7.5,b,cws[k]):T(x+5,ty+13,String(t),7.5,b);x+=cws[k]});ty+=rh};
+ const row=(vals,fill,b,sw)=>{let x=tx;vals.forEach((t,k)=>{B(x,ty,cws[k],rh,Array.isArray(fill)?fill[k]:fill);if(!k&&corVig&&sw!=null){B(x+4,ty+5,9,10,vc(sw,"D"));B(x+13,ty+5,9,10,vc(sw,"N"))}k?T(x,ty+13,String(t),7.5,b,cws[k]):T(x+5+(corVig&&sw!=null?22:0),ty+13,String(t),7.5,b);x+=cws[k]});ty+=rh};
  row(["Funcionário","SD","SN","Extra","Férias","Total"],col.h,1);
- BASE.forEach((f,i)=>{if(!vis(i))return;const v=Object.values(S[i]),n=k=>v.filter(z=>z==k).length,ex=i==EU?X.length:0;row([f.n,n("D"),n("N"),ex,n("F"),n("D")+n("N")+ex],[col.w,col.w,col.w,ex?col.X:col.w,col.w,col.w],0)});
+ BASE.forEach((f,i)=>{if(!vis(i))return;const v=Object.values(S[i]),n=k=>v.filter(z=>z==k).length,ex=i==EU?X.length:0;row([f.n,n("D"),n("N"),ex,n("F"),n("D")+n("N")+ex],[col.w,col.w,col.w,ex?col.X:col.w,col.w,col.w],0,i)});
  if(X.length)T(tx,ty+12,`Extras: ${X.filter(v=>v.k=="D").length} SD + ${X.filter(v=>v.k=="N").length} SN, somados ao total de ${BASE[EU].n}`,7.5,0);
  T(L,H-20,"Gerado em "+new Date().toLocaleDateString("pt-BR"),7,0);
  const o=[];
@@ -198,6 +210,7 @@ function pdfFill(){
  $("pdf").textContent="⬇️ Baixar escala de "+MN[+cur.slice(5)-1]+" (PDF)";
 }
 $("pdfmes").onchange=()=>{pdfSel=$("pdfmes").value;pdfFill()};
+$("corvig").checked=corVig;$("corvig").onchange=()=>{corVig=$("corvig").checked;ls.set("escala-corvig",corVig)};
 //PDF-END
 $("pdf").onclick=baixar;$("shr").onclick=compartilhar;
 try{if(!window.claude&&navigator.canShare&&navigator.canShare({files:[new File(["x"],"a.pdf",{type:"application/pdf"})]}))$("shr").style.display=""}catch(e){}
@@ -244,7 +257,7 @@ function rosFill(){
 <input data-r="m" data-i="${i}" value="${q(f.m)}" placeholder="Matrícula" size="9">
 <select data-r="v" data-i="${i}"><option${f.v=="Efetivo"?" selected":""}>Efetivo</option><option${f.v=="Nomeado"?" selected":""}>Nomeado</option></select>
 <select data-r="t" data-i="${i}"><option value="D"${f.t=="D"?" selected":""}>☀️ Diurno</option><option value="N"${f.t=="N"?" selected":""}>🌙 Noturno</option></select>
-<label class="mut"><input type="checkbox" data-r="a" data-i="${i}"${f.off?"":" checked"}> Ativo</label><button data-hide="${i}">${hidden(i)?"👁️ Mostrar em ":"🙈 Tirar de "}${MN[MES]}</button><button data-del="${i}" class="del">🗑️ Remover de todos</button></div>`).join("");
+<input type="color" data-r="cor" data-i="${i}" value="${corDe(i)}" title="Cor no PDF"><label class="mut"><input type="checkbox" data-r="a" data-i="${i}"${f.off?"":" checked"}> Ativo</label><button data-hide="${i}">${hidden(i)?"👁️ Mostrar em ":"🙈 Tirar de "}${MN[MES]}</button><button data-del="${i}" class="del">🗑️ Remover de todos</button></div>`).join("");
 }
 function rosChanged(){ls.set("escala-emp",BASE);fillSel();eufill();tudo()}
 $("ros").onchange=e=>{const t=e.target,r=t.dataset.r,f=BASE[+t.dataset.i];if(!r||!f)return;

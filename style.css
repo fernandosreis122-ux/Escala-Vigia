@@ -137,3 +137,5 @@ td b{font-size:15px}
   .top h1{font-size:23px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}button:active{transform:none}}
+.chk{display:flex;align-items:center;gap:8px;color:var(--tx);font-size:14px}
+input[type=color]{width:44px;height:38px;padding:2px;border-radius:10px;cursor:pointer}
