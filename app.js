@@ -17,7 +17,7 @@ let FER=ls.get("escala-fer")||{"2026-10":[{n:"Antônio José Lobo da Silva",p:"1
 let HID=ls.get("escala-hid")||{};
 let corVig=ls.get("escala-corvig")===true;
 const PALETA=["#5b8fd9","#8f5bd9","#2fb8a8","#c9a227","#d9549c","#8ab833","#cc66e0","#34b5d8"];
-const COR_NOME={fernando:"#5b8fd9",antonio:"#8f5bd9",renilson:"#2fb8a8",valdiney:"#c9a227",wilame:"#8b5a2b",jose:"#8ab833",lucas:"#cc66e0",israel:"#34b5d8"};
+const COR_NOME={fernando:"#5b8fd9",antonio:"#8ab833",renilson:"#2fb8a8",valdiney:"#c9a227",wilame:"#8b5a2b",jose:"#8f5bd9",lucas:"#cc66e0",israel:"#34b5d8"};
 const corDe=i=>{const f=BASE[i]||{};return f.cor||COR_NOME[norm(String(f.n||"").split(" ")[0])]||PALETA[i%PALETA.length]};
 function ensureIds(){let ch=false,n=1;BASE.forEach(b=>{if(!b.id){let id;do{id="e"+n++}while(BASE.some(x=>x.id==id));b.id=id;ch=true}});if(ch)ls.set("escala-emp",BASE)}ensureIds();
 function base(){return pad(INIT.map(f=>{const o={};f.dias.forEach(d=>o[d]=(f.t=="D"||(f.sd&&f.sd.includes(d)))?"D":"N");if(f.ferias)for(let d=f.ferias[0];d<=f.ferias[1];d++)o[d]="F";return o}))}
