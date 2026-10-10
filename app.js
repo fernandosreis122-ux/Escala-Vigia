@@ -16,6 +16,18 @@ const norm=s=>String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerC
 let FER=ls.get("escala-fer")||{"2026-10":[{n:"Antônio José Lobo da Silva",p:"10/09 a 09/10/2026",r:"2024/2025"}]};
 let HID=ls.get("escala-hid")||{};
 let corVig=ls.get("escala-corvig")===true;
+const HTIPO={nac:["Feriado Nacional","#8b5cf6","0.55 0.36 0.96"],mun:["Feriado Municipal","#ec4899","0.93 0.28 0.60"],fac:["Ponto Facultativo","#ef4444","0.90 0.30 0.30"],out:["Data comemorativa","#f59e0b","0.96 0.62 0.20"]};
+let HOL=ls.get("escala-hol");
+if(!Array.isArray(HOL)){HOL=[{id:"h1",d:"2026-10-12",n:"Dia de Nossa Senhora de Aparecida",t:"nac"},{id:"h2",d:"2026-10-15",n:"Dia de Santa Tereza D'Ávila (Padroeira da Cidade)",t:"mun"},{id:"h3",d:"2026-10-16",n:"Ponto Facultativo",t:"fac"}];ls.set("escala-hol",HOL)}
+if(!ls.get("escala-hol-s2")){if(!HOL.some(o=>o.d=="2026-10-28"))HOL.push({id:"h4",d:"2026-10-28",n:"Dia do Servidor",t:"out"});ls.set("escala-hol",HOL);ls.set("escala-hol-s2",true)}
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const dstr=d=>mk(ANO,MES)+"-"+String(d).padStart(2,"0");
+const holDia=d=>HOL.filter(o=>o.d==dstr(d));
+const holMes=()=>HOL.filter(o=>o.d.startsWith(mk(ANO,MES))).sort((a,b)=>a.d.localeCompare(b.d));
+const holDots=d=>{const l=holDia(d);return l.length?`<span class="hds">${l.map(o=>`<i class="hd" style="background:${HTIPO[o.t][1]}" title="${esc(o.n)}"></i>`).join("")}</span>`:""};
+const holTags=d=>holDia(d).map(o=>`<span class="htag" style="color:${HTIPO[o.t][1]};background:${HTIPO[o.t][1]}26">${HTIPO[o.t][0]}: ${esc(o.n)}</span>`).join("");
+const holDet=d=>holDia(d).map(o=>`<div style="border-left:3px solid ${HTIPO[o.t][1]};padding-left:10px"><b style="color:${HTIPO[o.t][1]}">${HTIPO[o.t][0]}</b><br>${esc(o.n)}</div>`).join("");
+const holNotes=d=>holDia(d).map(o=>`<p class="note" style="color:${HTIPO[o.t][1]};background:${HTIPO[o.t][1]}26">${HTIPO[o.t][0]}: ${esc(o.n)}</p>`).join("");
 const PALETA=["#5b8fd9","#8f5bd9","#2fb8a8","#c9a227","#d9549c","#8ab833","#cc66e0","#34b5d8"];
 const COR_NOME={fernando:"#5b8fd9",antonio:"#8ab833",renilson:"#2fb8a8",valdiney:"#c9a227",wilame:"#8b5a2b",jose:"#8f5bd9",lucas:"#cc66e0",israel:"#34b5d8"};
 const corDe=i=>{const f=BASE[i]||{};return f.cor||COR_NOME[norm(String(f.n||"").split(" ")[0])]||PALETA[i%PALETA.length]};
@@ -56,7 +68,7 @@ function hojeBox(){
 <div class="cols"><div><h3>Diurno<small>07h às 19h</small></h3><ul>${dia.map(x=>li(x,"D")).join("")||vazio}</ul></div>
 <div><h3>Noturno<small>19h às 07h</small></h3><ul>${nit.map(x=>li(x,"N")).join("")||vazio}</ul></div></div>`
  +(fer.length?`<p class="note f">Em férias: ${fer.map(x=>x.f.n.split(" ")[0]).join(", ")}</p>`:"")
- +(ex.length?`<p class="note x">Seu plantão extra: ${ex.map(x=>xl(x.k)).join(" + ")}</p>`:"");
+ +(ex.length?`<p class="note x">Seu plantão extra: ${ex.map(x=>xl(x.k)).join(" + ")}</p>`:"")+holNotes(d);
 }
 function render(){
  const ini=new Date(ANO,MES,1).getDay(),tot=new Date(ANO,MES+1,0).getDate();
@@ -67,7 +79,7 @@ function render(){
   for(let d=Math.max(a,1);d<=b;d++){
    const c=document.createElement("div");const w=new Date(ANO,MES,d).getDay();
    c.className="cell"+(isHoje(d)?" today":"")+(sel==d?" sel":"")+(w==0||w==6?" we":"")+(xs(d).length?" hasx":"");
-   c.innerHTML=`<div class="num">${SEM[w]} ${d}</div><div class="ch">${turnos(d).map(t=>chip(t,1)).join("")+xs(d).map(xchip).join("")||'<span class="mut">—</span>'}</div>`;
+   c.innerHTML=`<div class="num">${SEM[w]} ${d}</div><div class="ch">${holTags(d)}${turnos(d).map(t=>chip(t,1)).join("")+xs(d).map(xchip).join("")||'<span class="mut">—</span>'}</div>`;
    c.onclick=()=>{sel=d;render();detalhe(d)};g.appendChild(c);
   }
   $("vm").onclick=()=>setV("mes");$("pv").onclick=()=>{wk=Math.max(wk-7,1-ini);render()};$("nx").onclick=()=>{if(wk+7<=tot)wk+=7;render()};
@@ -78,12 +90,12 @@ function render(){
  for(let d=1;d<=tot;d++){
   const w=new Date(ANO,MES,d).getDay(),c=document.createElement("div");
   c.className="cell"+(w==0||w==6?" we":"")+(isHoje(d)?" today":"")+(sel==d?" sel":"")+(xs(d).length?" hasx":"");
-  c.innerHTML=`<div class="num">${d}</div>`+turnos(d).map(t=>chip(t)).join("")+xs(d).map(xchip).join("");
+  c.innerHTML=`<div class="num">${d}</div>${holDots(d)}`+turnos(d).map(t=>chip(t)).join("")+xs(d).map(xchip).join("");
   c.onclick=()=>{sel=d;render();detalhe(d)};g.appendChild(c);
  }
 }
 function detalhe(d){
- const w=SEM[new Date(ANO,MES,d).getDay()],h=`<h2>${w}, ${String(d).padStart(2,"0")}/${String(MES+1).padStart(2,"0")}/${ANO}${edit?" · editando":""}</h2>`;
+ const w=SEM[new Date(ANO,MES,d).getDay()],h=`<h2>${w}, ${String(d).padStart(2,"0")}/${String(MES+1).padStart(2,"0")}/${ANO}${edit?" · editando":""}</h2>`+holDet(d);
  if(edit){
   det.innerHTML=h+BASE.map((f,i)=>!vis(i)?"":`<div><b>${f.n}</b><div class="seg">${[["","—"],["D","SD"],["N","SN"],["F","Férias"]].map(([k,l])=>`<button data-i="${i}" data-k="${k}" class="${(S[i][d]||"")==k?"on":""}">${l}</button>`).join("")}</div></div>`).join("")+xdet(d,1)+`<div><b>➕ Adicionar plantão extra</b><div class="row"><select id="cov"><option value="">Cobrindo: qualquer</option>${BASE.map((f,i)=>`<option value="${i}">Cobrindo ${f.n}</option>`).join("")}</select></div><div class="seg"><button data-x="D">SD diurno</button><button data-x="N">SN noturno</button></div></div>`;
   return;
@@ -111,7 +123,7 @@ function monFill(){
  const vz=$("vaz"),e=!hasData(mk(ANO,MES));vz.style.display=e?"":"none";
  if(e)vz.innerHTML=`📭 Ainda não há escala de <b>${MN[MES]} de ${ANO}</b>. Quando chegar, importe o arquivo em <i>Backup</i> ou preencha pelo <b>✏️ Editar</b>.`;
 }
-function tudo(){monFill();vgChips();refX();$("tt").textContent=MN[MES]+" de "+ANO;render();detalhe(sel);cont();hojeBox();rosFill();pdfFill()}
+function tudo(){monFill();vgChips();refX();$("tt").textContent=MN[MES]+" de "+ANO;render();detalhe(sel);cont();hojeBox();rosFill();pdfFill();holFill()}
 det.onclick=e=>{const ax=e.target.closest("button[data-x]"),rx=e.target.closest("button[data-rx]");
  if(ax){XA.push({m:mk(ANO,MES),d:sel,k:ax.dataset.x,de:$("cov").value});ls.set("escala-x",XA);tudo();return}
  if(rx){XA.splice(+rx.dataset.rx,1);ls.set("escala-x",XA);tudo();return}
@@ -139,7 +151,7 @@ function pdfBytes(){
  let y=66;
  B(L,y,NW,rh*2,col.h);T(L+6,y+rh+4,"FUNCIONÁRIOS",8,1);
  for(let d=1;d<=tot;d++){const x=L+NW+(d-1)*cw,hc=(wdOf(d)==0||wdOf(d)==6)?col.wh:col.h;
-  B(x,y,cw,rh,hc);T(x,y+13,String(d),7,1,cw);
+  B(x,y,cw,rh,hc);T(x,y+13,String(d),7,1,cw);{const hl=holDia(d)[0];if(hl)B(x,y,cw,5,HTIPO[hl.t][2])}
   B(x,y+rh,cw,rh,hc);T(x,y+rh+13,L7[wdOf(d)],7,1,cw)}
  y+=rh*2;
  const grupo=(tit,tp)=>{
@@ -169,6 +181,7 @@ function pdfBytes(){
  row(["Funcionário","SD","SN","Extra","Férias","Total"],col.h,1);
  BASE.forEach((f,i)=>{if(!vis(i))return;const v=Object.values(S[i]),n=k=>v.filter(z=>z==k).length,ex=i==EU?X.length:0;row([f.n,n("D"),n("N"),ex,n("F"),n("D")+n("N")+ex],[col.w,col.w,col.w,ex?col.X:col.w,col.w,col.w],0,i)});
  if(X.length)T(tx,ty+12,`Extras: ${X.filter(v=>v.k=="D").length} SD + ${X.filter(v=>v.k=="N").length} SN, somados ao total de ${BASE[EU].n}`,7.5,0);
+ {const HM=holMes();if(HM.length){ty+=X.length?32:20;T(tx,ty,"FERIADOS E PONTOS FACULTATIVOS",8,1);ty+=8;HM.forEach(o=>{B(tx,ty,11,11,HTIPO[o.t][2]);T(tx+17,ty+9,o.d.slice(8)+"/"+o.d.slice(5,7)+" - "+o.n+(o.n==HTIPO[o.t][0]?"":" ("+HTIPO[o.t][0]+")"),8,0);ty+=15})}}
  T(L,H-20,"Gerado em "+new Date().toLocaleDateString("pt-BR"),7,0);
  const o=[];
  o[1]="<< /Type /Catalog /Pages 2 0 R >>";
@@ -215,7 +228,7 @@ $("corvig").checked=corVig;$("corvig").onchange=()=>{corVig=$("corvig").checked;
 $("pdf").onclick=baixar;$("shr").onclick=compartilhar;
 try{if(!window.claude&&navigator.canShare&&navigator.canShare({files:[new File(["x"],"a.pdf",{type:"application/pdf"})]}))$("shr").style.display=""}catch(e){}
 // backup
-const bkTxt=()=>JSON.stringify({v:3,emp:BASE,ALL,X:XA,fer:FER,hid:HID});
+const bkTxt=()=>JSON.stringify({v:3,emp:BASE,ALL,X:XA,fer:FER,hid:HID,hol:HOL});
 $("exp").onclick=()=>{$("bk").value=bkTxt()};
 $("cop").onclick=async()=>{const t=bkTxt();$("bk").value=t;
  try{await navigator.clipboard.writeText(t);alert("Backup copiado.")}catch(e){$("bk").select();try{document.execCommand("copy");alert("Backup copiado.")}catch(e2){alert("Selecione o texto e copie manualmente.")}}};
@@ -238,6 +251,7 @@ $("imp").onclick=()=>{try{const x=JSON.parse($("bk").value.replace(/^\uFEFF/,"")
   for(const k in A)if(!Array.isArray(A[k])||A[k].length>BASE.length)throw 0;
   ALL=A;XA=XX.map(v=>({m:"2026-10",...v}));if(x.fer)FER=x.fer;
  }
+ if(Array.isArray(x.hol)){if(x.merge){const ks=new Set(HOL.map(o=>o.d+"|"+o.n));x.hol.forEach(o=>{if(!ks.has(o.d+"|"+o.n))HOL.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),...o})})}else HOL=x.hol;holSave()}
  ls.set("escala-emp",BASE);ls.set("escala-fer",FER);ls.set("escala-hid",HID);
  S=getS(ANO,MES);sel=(hoje.getFullYear()==ANO&&hoje.getMonth()==MES)?hoje.getDate():1;wk=sel-new Date(ANO,MES,sel).getDay();
  save();ls.set("escala-x",XA);fillSel();eufill();rosFill();tudo();alert(x.merge?"Escala de "+MN[MES]+" de "+ANO+" importada.":"Backup restaurado.")}catch(e){alert("Não foi possível importar. Escolha um arquivo de backup .json ou cole o texto completo do backup.")}};
@@ -285,3 +299,41 @@ rosFill();
 const tabs=document.querySelectorAll("[data-tab]");
 function showTab(n){document.querySelectorAll("[data-pane]").forEach(p=>{p.hidden=p.dataset.pane!=n});tabs.forEach(b=>b.classList.toggle("on",b.dataset.tab==n));try{scrollTo(0,0)}catch(e){}}
 tabs.forEach(b=>{b.onclick=()=>showTab(b.dataset.tab)});
+
+// feriados e pontos facultativos
+const holSave=()=>ls.set("escala-hol",HOL);
+function holFill(){
+ const L=holMes();
+ $("holl").innerHTML=`<p class="mut">Mostrando ${MN[MES]} de ${ANO}. Troque o mês na aba Escala para ver os outros.</p>`
+  +(L.length?L.map(o=>`<div class="rv"><i class="dot" style="background:${HTIPO[o.t][1]}"></i><span style="flex:1"><b>${o.d.slice(8)}/${o.d.slice(5,7)}</b> ${esc(o.n)}<br><small class="mut">${HTIPO[o.t][0]}</small></span><button data-hdel="${o.id}" class="del">Remover</button></div>`).join(""):`<p class="mut">Nenhuma data neste mês.</p>`);
+}
+$("holl").onclick=e=>{const b=e.target.closest("button[data-hdel]");if(b&&confirm("Remover esta data?")){HOL=HOL.filter(o=>o.id!=b.dataset.hdel);holSave();tudo()}};
+$("hadd").onclick=()=>{
+ const d=$("hd").value,n=$("hn").value.trim(),t=$("ht").value;
+ if(!d||!n){alert("Escolha a data e escreva o nome.");return}
+ HOL.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),d,n,t});holSave();$("hn").value="";tudo();
+};
+
+// feriados em JSON (copiar e colar)
+const holJson=()=>JSON.stringify({v:3,merge:true,emp:[],ALL:{},hol:HOL.slice().sort((a,b)=>a.d.localeCompare(b.d)).map(({d,n,t})=>({d,n,t}))});
+$("holcop").onclick=async()=>{
+ const t=holJson();$("holbk").value=t;
+ try{await navigator.clipboard.writeText(t);alert("Feriados copiados. Cole onde quiser.")}
+ catch(e){$("holbk").select();try{document.execCommand("copy");alert("Feriados copiados. Cole onde quiser.")}catch(e2){alert("Selecione o texto da caixa e copie manualmente.")}}
+};
+$("holimp").onclick=()=>{
+ try{
+  const x=JSON.parse($("holbk").value.replace(/^\uFEFF/,"").trim());
+  const L=Array.isArray(x)?x:x.hol;
+  if(!Array.isArray(L))throw 0;
+  const ks=new Set(HOL.map(o=>o.d+"|"+o.n));let novos=0;
+  L.forEach(o=>{
+   if(!o||!/^\d{4}-\d{2}-\d{2}$/.test(o.d)||!String(o.n||"").trim())return;
+   const n=String(o.n).trim(),t=HTIPO[o.t]?o.t:"out";
+   if(ks.has(o.d+"|"+n))return;
+   HOL.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),d:o.d,n,t});ks.add(o.d+"|"+n);novos++;
+  });
+  holSave();tudo();
+  alert(novos?novos+" data(s) importada(s).":"Nenhuma data nova: todas já estavam cadastradas.");
+ }catch(e){alert("Não foi possível importar. Cole o texto completo dos feriados.")}
+};

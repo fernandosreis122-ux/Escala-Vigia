@@ -139,3 +139,14 @@ td b{font-size:15px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}button:active{transform:none}}
 .chk{display:flex;align-items:center;gap:8px;color:var(--tx);font-size:14px}
 input[type=color]{width:44px;height:38px;padding:2px;border-radius:10px;cursor:pointer}
+
+/* feriados */
+.cell{position:relative}
+.hds{position:absolute;top:9px;right:8px;display:flex;gap:3px}
+.hd{display:block;width:8px;height:8px;border-radius:50%}
+.htag{display:block;font-size:12px;font-weight:700;border-radius:8px;padding:4px 9px;margin-bottom:5px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#holf label{display:block;font-size:13px;color:var(--mut);margin-top:10px}
+#holf input,#holf select{display:block;width:100%;margin-top:4px;font-size:15px;color:var(--tx)}
+#holl .rv{flex-wrap:nowrap}
+.sub{font-size:15px;margin:18px 0 0}

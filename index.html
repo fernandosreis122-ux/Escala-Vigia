@@ -47,6 +47,10 @@
     <span><i class="dot N"></i>SN noturno, 19h às 07h</span>
     <span><i class="dot F"></i>Férias</span>
     <span><i class="dot X"></i>Plantão extra</span>
+    <span><i class="dot" style="background:#8b5cf6"></i>Feriado nacional</span>
+    <span><i class="dot" style="background:#ec4899"></i>Feriado municipal</span>
+    <span><i class="dot" style="background:#ef4444"></i>Ponto facultativo</span>
+    <span><i class="dot" style="background:#f59e0b"></i>Data comemorativa</span>
   </div>
 
   <div class="card vazio" id="vaz" style="display:none"></div>
@@ -75,6 +79,24 @@
     <p class="mut">Seus plantões extras ficam na sua linha e somam no seu total.</p>
     <div class="row"><select id="eu"></select></div>
   </div>
+
+  <details class="card">
+    <summary>🎌 Feriados e pontos facultativos</summary>
+    <p class="mut">Aparecem no calendário (bolinha colorida no dia) e no PDF. Cadastre aqui as datas do calendário da prefeitura.</p>
+    <div id="holl"></div>
+    <div id="holf">
+      <div class="fg">
+        <label>Data<input type="date" id="hd"></label>
+        <label>Tipo<select id="ht"><option value="nac">Feriado Nacional</option><option value="mun">Feriado Municipal</option><option value="fac">Ponto Facultativo</option><option value="out">Data comemorativa</option></select></label>
+      </div>
+      <label>Nome<input id="hn" placeholder="Ex.: Dia do Servidor Público" autocomplete="off"></label>
+      <div class="row"><button id="hadd" class="primary">➕ Adicionar</button></div>
+    </div>
+    <h3 class="sub">Copiar e colar (JSON)</h3>
+    <p class="mut">Copie as datas para levar a outro aparelho, ou cole aqui o texto que eu te mandar. Datas novas são acrescentadas; as que já existem não duplicam.</p>
+    <textarea id="holbk" placeholder="Cole aqui o JSON dos feriados"></textarea>
+    <div class="row"><button id="holcop">📋 Copiar feriados</button><button id="holimp">Importar feriados</button></div>
+  </details>
 
   <details class="card">
     <summary>👥 Gerenciar vigias</summary>
