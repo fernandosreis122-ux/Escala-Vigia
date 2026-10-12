@@ -271,7 +271,7 @@ function rosFill(){
 <input data-r="m" data-i="${i}" value="${q(f.m)}" placeholder="Matrícula" size="9">
 <select data-r="v" data-i="${i}"><option${f.v=="Efetivo"?" selected":""}>Efetivo</option><option${f.v=="Nomeado"?" selected":""}>Nomeado</option></select>
 <select data-r="t" data-i="${i}"><option value="D"${f.t=="D"?" selected":""}>☀️ Diurno</option><option value="N"${f.t=="N"?" selected":""}>🌙 Noturno</option></select>
-<input type="color" data-r="cor" data-i="${i}" value="${corDe(i)}" title="Cor no PDF"><label class="mut"><input type="checkbox" data-r="a" data-i="${i}"${f.off?"":" checked"}> Ativo</label><button data-hide="${i}">${hidden(i)?"👁️ Mostrar em ":"🙈 Tirar de "}${MN[MES]}</button><button data-del="${i}" class="del">🗑️ Remover de todos</button></div>`).join("");
+<input type="color" data-r="cor" data-i="${i}" value="${corDe(i)}" title="Cor no PDF"><label class="mut"><input type="checkbox" data-r="a" data-i="${i}"${f.off?"":" checked"}> Ativo</label><button data-hide="${i}">${hidden(i)?"👁️ Mostrar em ":" Tirar de "}${MN[MES]}</button><button data-del="${i}" class="del">🗑️ Remover de todos</button></div>`).join("");
 }
 function rosChanged(){ls.set("escala-emp",BASE);fillSel();eufill();tudo()}
 $("ros").onchange=e=>{const t=e.target,r=t.dataset.r,f=BASE[+t.dataset.i];if(!r||!f)return;
