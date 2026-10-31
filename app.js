@@ -39,8 +39,11 @@ if(!ALL){ALL={};const old=ls.get("escala-v2");if(old&&old.length<=BASE.length)AL
 function getS(y,m){const k=mk(y,m);if(!Array.isArray(ALL[k]))ALL[k]=(k=="2026-10")?base():empty();else pad(ALL[k]);return ALL[k]}
 let S=getS(ANO,MES);
 const save=()=>ls.set("escala-all",ALL);
-let XA=ls.get("escala-x");if(!Array.isArray(XA))XA=[];XA=XA.map(v=>({m:"2026-10",...v}));
 let EU=ls.get("escala-eu");if(typeof EU!="number"||EU<0||EU>=BASE.length)EU=0;
+let XA=ls.get("escala-x");if(!Array.isArray(XA))XA=[];
+let migrouDonoExtra=false;
+XA=XA.map(v=>{const x={m:"2026-10",...v};if(!BASE.some(f=>f.id==x.vigiaId)){x.vigiaId=BASE[EU].id;migrouDonoExtra=true}return x});
+if(migrouDonoExtra)ls.set("escala-x",XA);
 let X=[];const refX=()=>{X=XA.filter(x=>x.m==mk(ANO,MES))};refX();
 let tipo="",view="mes",edit=false,sel=null,wk=0;
 const fillSel=()=>{const cur=fil.value;fil.innerHTML='<option value="">Todos os funcionários</option>'+BASE.map((f,i)=>`<option value="${i}">${f.n}</option>`).join("");fil.value=cur};fillSel();
@@ -51,9 +54,10 @@ const LB={D:"SD",N:"SN",F:"Férias"};
 function turnos(d){const r=[];BASE.forEach((f,i)=>{const k=S[i][d];if(k)r.push({f,i,k,l:LB[k]})});
  return r.filter(x=>(!fil.value||x.i==fil.value)&&(!tipo||x.k==tipo))}
 const xs=d=>XA.map((x,j)=>({...x,j})).filter(x=>x.d==d&&x.m==mk(ANO,MES));
+const extrasVigia=i=>X.filter(x=>x.vigiaId==BASE[i].id);
 const xl=k=>k=="D"?"SD":"SN";
-const xchip=x=>`<span class="chip X"><span class="full">Extra ${xl(x.k)}${x.de!==""?" · cobre "+BASE[x.de].n.split(" ")[0]:""}</span><span class="ini">Extra ${xl(x.k)}</span></span>`;
-const xdet=(d,ed)=>xs(d).map(x=>`<div><i class="dot" style="background:var(--x)"></i><b>Plantão extra ${x.k=="D"?"SD (07:00–19:00)":"SN (19:00–07:00)"}</b>${x.de!==""?"<br><span>Cobrindo "+BASE[x.de].n+"</span>":""}${ed?` <button data-rx="${x.j}">Remover</button>`:""}</div>`).join("");
+const xchip=x=>`<span class="chip X"><span class="full">Extra ${xl(x.k)} · ${esc((BASE.find(f=>f.id==x.vigiaId)||{}).n||"Vigia")}${x.de!==""?" · cobre "+BASE[x.de].n.split(" ")[0]:""}</span><span class="ini">Extra ${xl(x.k)}</span></span>`;
+const xdet=(d,ed)=>xs(d).map(x=>`<div><i class="dot" style="background:var(--x)"></i><b>Plantão extra ${x.k=="D"?"SD (07:00–19:00)":"SN (19:00–07:00)"} · ${esc((BASE.find(f=>f.id==x.vigiaId)||{}).n||"Vigia")}</b>${x.de!==""?"<br><span>Cobrindo "+BASE[x.de].n+"</span>":""}${ed?` <button data-rx="${x.j}">Remover</button>`:""}</div>`).join("");
 const ini=n=>{const p=n.split(" ");return p[0][0]+p[p.length-1][0]};
 const chip=(t,full)=>`<span class="chip ${t.k}" title="${t.f.n}"><span class="full">${t.l} ${full?t.f.n:t.f.n.split(" ")[0]}</span><span class="ini">${t.k=="F"?"Fér":t.l} ${ini(t.f.n)}</span></span>`;
 function hojeBox(){
@@ -62,7 +66,7 @@ function hojeBox(){
  const d=hoje.getDate(),hr=hoje.getHours(),noite=hr>=19||hr<7,t=[];
  BASE.forEach((f,i)=>{const k=S[i][d];if(k)t.push({f,k})});
  const li=(x,c)=>`<li><i class="dot ${c}"></i>${x.f.n}</li>`,vazio="<li class='mut'>Ninguém</li>";
- const dia=t.filter(x=>x.k=="D"),nit=t.filter(x=>x.k=="N"),fer=t.filter(x=>x.k=="F"),ex=xs(d);
+ const dia=t.filter(x=>x.k=="D"),nit=t.filter(x=>x.k=="N"),fer=t.filter(x=>x.k=="F"),ex=xs(d).filter(x=>x.vigiaId==BASE[EU].id);
  el.className="hero "+(noite?"night":"day");
  el.innerHTML=`<div class="hh"><span class="hi">${noite?"🌙":"☀️"}</span><div><small>Hoje</small><b>${SEM[hoje.getDay()]}, ${String(d).padStart(2,"0")} de ${MN[MES].toLowerCase()}</b></div></div>
 <div class="cols"><div><h3>Diurno<small>07h às 19h</small></h3><ul>${dia.map(x=>li(x,"D")).join("")||vazio}</ul></div>
@@ -104,16 +108,17 @@ function detalhe(d){
  det.innerHTML=h+(t.length?t.map(x=>`<div><i class="dot" style="background:var(--${x.k.toLowerCase()})"></i><b>${x.f.n}</b> — ${x.k=="D"?"Serviço diurno (07:00–19:00)":x.k=="N"?"Serviço noturno (19:00–07:00)":"Férias"}<br><span>Mat. ${x.f.m} · ${x.f.v}</span></div>`).join(""):"<span>Sem escalas neste dia.</span>")+xdet(d,0);
 }
 function cont(){
+ const meusExtras=extrasVigia(EU);
  $("cnt").innerHTML="<table><tr><th>Funcionário</th><th>SD</th><th>SN</th><th>Extra</th><th>Férias</th><th>Total</th></tr>"+BASE.map((f,i)=>{if(!vis(i))return"";
-  const v=Object.values(S[i]),c=k=>v.filter(x=>x==k).length,ex=i==EU?X.length:0;
-  return `<tr><td>${f.n.split(" ").slice(0,2).join(" ")}</td><td>${c("D")}</td><td>${c("N")}</td><td style="color:var(--x)">${ex}</td><td>${c("F")}</td><td><b>${c("D")+c("N")+ex}</b></td></tr>`}).join("")+"</table>"+(X.length?`<p style="color:var(--x)">🟢 Plantões extras: <b>${X.length}</b> (SD ${X.filter(x=>x.k=="D").length} · SN ${X.filter(x=>x.k=="N").length}) somados ao total de ${BASE[EU].n.split(" ")[0]}</p>`:"");
+  const v=Object.values(S[i]),c=k=>v.filter(x=>x==k).length,ex=extrasVigia(i).length;
+  return `<tr><td>${f.n.split(" ").slice(0,2).join(" ")}</td><td>${c("D")}</td><td>${c("N")}</td><td style="color:var(--x)">${ex}</td><td>${c("F")}</td><td><b>${c("D")+c("N")+ex}</b></td></tr>`}).join("")+"</table>"+(meusExtras.length?`<p style="color:var(--x)">🟢 Seus plantões extras: <b>${meusExtras.length}</b> (SD ${meusExtras.filter(x=>x.k=="D").length} · SN ${meusExtras.filter(x=>x.k=="N").length}), somados ao total de ${BASE[EU].n.split(" ")[0]}</p>`:"");
 }
 function vgChips(){
  const nm=f=>{const p=f.n.split(" ");return p[0]+" "+p[p.length-1]};
  $("vgc").innerHTML=`<button data-i="" class="${fil.value===""?"on":""}">Todos</button>`+BASE.map((f,i)=>!vis(i)?"":`<button data-i="${i}" class="${f.t=="D"?"d":"n"} ${fil.value===String(i)?"on":""}">${f.t=="D"?"☀️":"🌙"} ${nm(f)}</button>`).join("");
 }
 $("vgc").onclick=e=>{const b=e.target.closest("button");if(!b)return;const v=b.dataset.i;fil.value=(v!==""&&fil.value===v)?"":v;vgChips();render()};
-const eufill=()=>{$("eu").innerHTML=BASE.map((f,i)=>`<option value="${i}">${f.n}</option>`).join("");$("eu").value=EU};eufill();$("eu").onchange=()=>{EU=+$("eu").value;ls.set("escala-eu",EU);cont()};
+const eufill=()=>{$("eu").innerHTML=BASE.map((f,i)=>`<option value="${i}">${f.n}</option>`).join("");$("eu").value=EU};eufill();$("eu").onchange=()=>{EU=+$("eu").value;ls.set("escala-eu",EU);cont();hojeBox()};
 function hasData(k){return Array.isArray(ALL[k])&&ALL[k].some(o=>Object.keys(o).length>0)}
 function monFill(){
  const idx=Object.keys(ALL).map(k=>{const p=k.split("-");return +p[0]*12+ +p[1]-1});
@@ -125,7 +130,7 @@ function monFill(){
 }
 function tudo(){monFill();vgChips();refX();$("tt").textContent=MN[MES]+" de "+ANO;render();detalhe(sel);cont();hojeBox();rosFill();pdfFill();holFill()}
 det.onclick=e=>{const ax=e.target.closest("button[data-x]"),rx=e.target.closest("button[data-rx]");
- if(ax){XA.push({m:mk(ANO,MES),d:sel,k:ax.dataset.x,de:$("cov").value});ls.set("escala-x",XA);tudo();return}
+ if(ax){XA.push({m:mk(ANO,MES),d:sel,k:ax.dataset.x,de:$("cov").value,vigiaId:BASE[EU].id});ls.set("escala-x",XA);tudo();return}
  if(rx){XA.splice(+rx.dataset.rx,1);ls.set("escala-x",XA);tudo();return}
  const b=e.target.closest("button[data-k]");if(!b)return;
  const i=b.dataset.i,k=b.dataset.k;if(k)S[i][sel]=k;else delete S[i][sel];save();tudo()};
@@ -144,7 +149,7 @@ function pdfBytes(){
  const B=(x,y,w,h,fill)=>{c+=`${fill} rg 0.5 G 0.5 w ${f1(x)} ${f1(H-y-h)} ${f1(w)} ${f1(h)} re B\n`};
  const vc=(i,k)=>{const x=corDe(i),m=k=="D"?0.45:1,c=n=>(m*parseInt(x.slice(n,n+2),16)/255+(1-m)).toFixed(2);return c(1)+" "+c(3)+" "+c(5)};
  const cc=(i,k)=>corVig&&(k=="D"||k=="N")?vc(i,k):col[k];
- const col={D:"1 0.85 0.45",N:"0.62 0.72 1",F:"0.96 0.62 0.67",X:"0.45 0.88 0.6",we:"0.99 0.86 0.74",wh:"0.96 0.6 0.35",w:"1 1 1",h:"0.78 0.78 0.78"};
+ const col={D:"1 0.85 0.45",N:"0.62 0.72 1",F:"0.96 0.62 0.67",X:"0.30 0.65 0.35",we:"0.99 0.86 0.74",wh:"0.96 0.6 0.35",w:"1 1 1",h:"0.78 0.78 0.78"};
  const L7=["D","S","T","Q","Q","S","S"],wdOf=d=>new Date(ANO,MES,d).getDay();
  T(L,34,"Prefeitura de Imperatriz - Secretaria Municipal de Administração e Modernização",9,0);
  T(L,54,`VIGIA - ESCALA DE ${MN[MES].toUpperCase()} DE ${ANO}`,14,1);
@@ -158,7 +163,7 @@ function pdfBytes(){
   B(L,y,NW+tot*cw,15,"0.92 0.92 0.92");T(L+6,y+11,tit,8,1);y+=15;
   BASE.forEach((f,i)=>{if(f.t!=tp||!vis(i))return;
    B(L,y,NW,rh,col.w);if(corVig){B(L+4,y+5,9,10,vc(i,"D"));B(L+13,y+5,9,10,vc(i,"N"))}T(L+(corVig?27:4),y+13,f.n,7.5,0);
-   for(let d=1;d<=tot;d++){const x=L+NW+(d-1)*cw,k=S[i][d],w=wdOf(d),ex=i==EU?X.filter(v=>v.d==d).map(v=>xl(v.k)):[],lab=k=="F"?"F":k=="D"?"SD":"SN",et=ex.join("+");
+   for(let d=1;d<=tot;d++){const x=L+NW+(d-1)*cw,k=S[i][d],w=wdOf(d),ex=extrasVigia(i).filter(v=>v.d==d).map(v=>xl(v.k)),lab=k=="F"?"F":k=="D"?"SD":"SN",et=ex.join("+");
     if(k&&ex.length){B(x,y,cw/2,rh,cc(i,k));B(x+cw/2,y,cw/2,rh,col.X);T(x,y+13,lab,5,1,cw/2);T(x+cw/2,y+13,et,et.length>2?4:5,1,cw/2)}
     else if(ex.length){B(x,y,cw,rh,col.X);T(x,y+13,et,et.length>2?5:6.5,1,cw)}
     else{B(x,y,cw,rh,k?cc(i,k):(w==0||w==6?col.we:col.w));if(k)T(x,y+13,lab,6.5,1,cw)}}
@@ -179,8 +184,8 @@ function pdfBytes(){
  T(tx,ty,"TOTAL DE TURNOS NO MÊS",8,1);ty+=8;
  const row=(vals,fill,b,sw)=>{let x=tx;vals.forEach((t,k)=>{B(x,ty,cws[k],rh,Array.isArray(fill)?fill[k]:fill);if(!k&&corVig&&sw!=null){B(x+4,ty+5,9,10,vc(sw,"D"));B(x+13,ty+5,9,10,vc(sw,"N"))}k?T(x,ty+13,String(t),7.5,b,cws[k]):T(x+5+(corVig&&sw!=null?22:0),ty+13,String(t),7.5,b);x+=cws[k]});ty+=rh};
  row(["Funcionário","SD","SN","Extra","Férias","Total"],col.h,1);
- BASE.forEach((f,i)=>{if(!vis(i))return;const v=Object.values(S[i]),n=k=>v.filter(z=>z==k).length,ex=i==EU?X.length:0;row([f.n,n("D"),n("N"),ex,n("F"),n("D")+n("N")+ex],[col.w,col.w,col.w,ex?col.X:col.w,col.w,col.w],0,i)});
- if(X.length)T(tx,ty+12,`Extras: ${X.filter(v=>v.k=="D").length} SD + ${X.filter(v=>v.k=="N").length} SN, somados ao total de ${BASE[EU].n}`,7.5,0);
+ BASE.forEach((f,i)=>{if(!vis(i))return;const v=Object.values(S[i]),n=k=>v.filter(z=>z==k).length,ex=extrasVigia(i).length;row([f.n,n("D"),n("N"),ex,n("F"),n("D")+n("N")+ex],[col.w,col.w,col.w,ex?col.X:col.w,col.w,col.w],0,i)});
+ if(X.length)T(tx,ty+12,`Extras: ${X.filter(v=>v.k=="D").length} SD + ${X.filter(v=>v.k=="N").length} SN, somados aos totais dos respectivos vigias`,7.5,0);
  {const HM=holMes();if(HM.length){ty+=X.length?32:20;T(tx,ty,"FERIADOS E PONTOS FACULTATIVOS",8,1);ty+=8;HM.forEach(o=>{B(tx,ty,11,11,HTIPO[o.t][2]);T(tx+17,ty+9,o.d.slice(8)+"/"+o.d.slice(5,7)+" - "+o.n+(o.n==HTIPO[o.t][0]?"":" ("+HTIPO[o.t][0]+")"),8,0);ty+=15})}}
  T(L,H-20,"Gerado em "+new Date().toLocaleDateString("pt-BR"),7,0);
  const o=[];
@@ -244,12 +249,17 @@ $("imp").onclick=()=>{try{const x=JSON.parse($("bk").value.replace(/^\uFEFF/,"")
   ensureIds();Object.keys(ALL).forEach(k=>pad(ALL[k]));
   if(x.hid)for(const k in x.hid){const ids=x.hid[k].map(n=>{const b=BASE.find(b=>norm(b.n)==norm(n));return b&&b.id}).filter(Boolean);HID[k]=[...new Set([...(HID[k]||[]),...ids])]}
   if(x.fer)FER={...FER,...x.fer};
-  if(Array.isArray(x.X))x.X.forEach(v=>{if(!XA.some(w=>w.m==v.m&&w.d==v.d&&w.k==v.k))XA.push({de:"",...v})});
+  if(Array.isArray(x.X))x.X.forEach(v=>{
+   const oi=Array.isArray(x.emp)?x.emp.findIndex(e=>e.id==v.vigiaId):-1;
+   const atual=BASE.find(b=>b.id==v.vigiaId);
+   const uid=oi>=0&&map?BASE[map[oi]].id:atual?atual.id:BASE[EU].id;
+   if(!XA.some(w=>w.m==v.m&&w.d==v.d&&w.k==v.k&&w.vigiaId==uid))XA.push({de:"",...v,vigiaId:uid});
+  });
   const k=Object.keys(A).sort()[0];if(k){ANO=+k.slice(0,4);MES=+k.slice(5)-1}
  }else{
-  if(Array.isArray(x.emp)&&x.emp.length){BASE=x.emp;HID=x.hid||{};ensureIds()}
+  if(Array.isArray(x.emp)&&x.emp.length){BASE=x.emp;HID=x.hid||{};ensureIds();if(EU>=BASE.length)EU=0}
   for(const k in A)if(!Array.isArray(A[k])||A[k].length>BASE.length)throw 0;
-  ALL=A;XA=XX.map(v=>({m:"2026-10",...v}));if(x.fer)FER=x.fer;
+  ALL=A;XA=XX.map(v=>{const item={m:"2026-10",...v};if(!BASE.some(f=>f.id==item.vigiaId))item.vigiaId=BASE[EU].id;return item});if(x.fer)FER=x.fer;
  }
  if(Array.isArray(x.hol)){if(x.merge){const ks=new Set(HOL.map(o=>o.d+"|"+o.n));x.hol.forEach(o=>{if(!ks.has(o.d+"|"+o.n))HOL.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),...o})})}else HOL=x.hol;holSave()}
  ls.set("escala-emp",BASE);ls.set("escala-fer",FER);ls.set("escala-hid",HID);
@@ -281,8 +291,11 @@ function remover(i){
  const f=BASE[i];if(!f)return;
  if(BASE.length<2){alert("Precisa ficar pelo menos um vigia.");return}
  let meses=0,tn=0;Object.keys(ALL).forEach(k=>{const n=Object.keys((ALL[k]||[])[i]||{}).length;if(n){meses++;tn+=n}});
- const msg=tn?`Remover ${f.n}?\n\nIsso apaga ${tn} dia(s) de escala dele em ${meses} mês(es), inclusive nos PDFs antigos. Isso vale para TODOS os meses. Para tirar só de um mês, use o botão "Tirar de" (ele pode ser desfeito). Não dá para desfazer a remoção; faça um backup antes.`:`Remover ${f.n}?`;
+ const extras=XA.filter(x=>x.vigiaId==f.id).length;
+ const dados=[tn?`${tn} dia(s) de escala em ${meses} mês(es)`:"",extras?`${extras} plantão(ões) extra`:""].filter(Boolean).join(" e ");
+ const msg=dados?`Remover ${f.n}?\n\nIsso apaga ${dados} dele, inclusive nos PDFs antigos. Isso vale para TODOS os meses. Para tirar só de um mês, use o botão "Tirar de" (ele pode ser desfeito). Não dá para desfazer a remoção; faça um backup antes.`:`Remover ${f.n}?`;
  if(!confirm(msg))return;
+ XA=XA.filter(x=>x.vigiaId!=f.id);
  BASE.splice(i,1);
  Object.keys(ALL).forEach(k=>{if(Array.isArray(ALL[k]))ALL[k].splice(i,1)});
  XA.forEach(x=>{if(x.de!==""&&x.de!=null){const d=+x.de;x.de=d==i?"":String(d>i?d-1:d)}});
