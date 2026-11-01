@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0c111c">
+<meta name="theme-color" content="#070a12">
+<meta name="description" content="Escala de plantões dos vigias: calendário, totais, feriados e PDF.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -14,6 +15,17 @@
 </head>
 <body>
 <main class="app">
+
+<header class="appbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">EV</span>
+    <span class="brand-txt">
+      <strong>Escala Vigia</strong>
+      <span>Plantões e escalas</span>
+    </span>
+  </div>
+  <span class="brand-tag"><i></i>Local</span>
+</header>
 
 <section data-pane="escala">
   <header class="top">
@@ -54,8 +66,10 @@
   </div>
 
   <div class="card vazio" id="vaz" style="display:none"></div>
-  <div class="grid" id="g"></div>
-  <div class="card" id="det"></div>
+  <div class="cal-wrap">
+    <div class="grid" id="g"></div>
+    <div class="card" id="det"></div>
+  </div>
 </section>
 
 <section data-pane="totais" hidden>
